@@ -18,6 +18,7 @@ out. If something feels too dense, jump back to [key concepts](overview/key-conc
 | Look up a term you saw in code or another doc | [overview/key-concepts.md](overview/key-concepts.md) |
 | See the whole architecture in one diagram | [architecture/system-design.md](architecture/system-design.md) |
 | Understand the GPT-Realtime model itself | [reference/gpt-realtime-2.md](reference/gpt-realtime-2.md) |
+| See which Realtime models we use (and which we don't) | [reference/realtime-models-in-use.md](reference/realtime-models-in-use.md) |
 | Know how phone calls actually reach the agent | [reference/twilio-integration.md](reference/twilio-integration.md) |
 | Identify every technology used and why | [reference/stack.md](reference/stack.md) |
 
