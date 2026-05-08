@@ -39,7 +39,10 @@ Talk (mode=realtime2):           Notes only (mode=notetaker):
 In code: `edge/src/webrtc/signaling.ts` branches on the `mode` query
 param. `mode=notetaker` calls `startNotetakerSession()` instead of
 `startAgentSession()`; the former opens a `TranscriptionSession`
-directly with no `RealtimeSession` ever instantiated.
+directly with no `RealtimeSession` ever instantiated. The whisper
+WebSocket connects to `wss://api.openai.com/v1/realtime?intent=transcription`
+(distinct from the conversational endpoint — see
+[reference/realtime-models-in-use.md](../reference/realtime-models-in-use.md)).
 
 ---
 

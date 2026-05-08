@@ -70,7 +70,12 @@ When all three hold, the Twilio webhook serves a different TwiML.
      • POSTs /v1/sessions { surface:'phone', vertical:'hvac', mode:'voicemail' }
        Core creates the conversations row but does NOT attach an agent
        runtime (mode is in _AGENTLESS_MODES).
-     • Opens a TranscriptionSession solo (whisper-only WS).
+     • Opens a TranscriptionSession solo. The whisper WebSocket
+       connects to wss://api.openai.com/v1/realtime?intent=transcription
+       — a separate URL from the conversational endpoint, with the
+       model id passed in the session.update at
+       audio.input.transcription.model (see
+       reference/realtime-models-in-use.md).
 
 8. Twilio streams the caller's audio. Edge decodes μ-law,
    resamples 8 kHz → 24 kHz, base64-encodes, forwards to whisper.

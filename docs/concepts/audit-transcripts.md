@@ -45,6 +45,11 @@ When true:
 - `RealtimeSession.shouldHaveSidecar()` returns true unconditionally.
 - The sidecar opens **at session start in parallel** with the primary
   WS — `Promise.all([primary.open(), sidecar.open()])` — not lazily.
+- The sidecar's WebSocket connects to
+  `wss://api.openai.com/v1/realtime?intent=transcription` — a different
+  URL from the conversational endpoint (the GA API treats transcription
+  as a distinct session class). Model id passes via the session.update
+  payload, not the URL.
 
 Why parallel and not lazy: for translate-mode bilingual capture, lazy
 opening hides latency behind the user's first utterance; for audit,

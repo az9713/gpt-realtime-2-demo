@@ -77,6 +77,13 @@ Used in two operational shapes (solo and sidecar) across five
 features. The shared class is `TranscriptionSession`
 (`edge/src/openai/transcription.ts`).
 
+| Aspect | Notes |
+|---|---|
+| Endpoint | `wss://api.openai.com/v1/realtime?intent=transcription` (no `model=` query) |
+| Model selector | `audio.input.transcription.model` in the session.update payload |
+| session.update shape | `session.type: "transcription"`; no `output_modalities`, `tools`, `instructions`, `audio.output`, or `turn_detection` |
+| Why a different URL | GA distinguishes "realtime sessions" from "transcription sessions" at the URL level. See [docs/ops.md](../ops.md#whisper-transcription-session--endpoint-quirks). |
+
 ### Feature 1 — Voicemail / overflow handler (solo)
 
 | Aspect | Lives in |

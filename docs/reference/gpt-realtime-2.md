@@ -59,12 +59,22 @@ required.
 
 | Model | Purpose | Endpoint |
 |---|---|---|
-| `gpt-realtime-2` | Conversational default; reasons, calls tools | `?model=gpt-realtime-2` |
-| `gpt-realtime-translate` | Passthrough translator; no tools, no reasoning | `?model=gpt-realtime-translate` |
+| `gpt-realtime-2` | Conversational default; reasons, calls tools | `wss://api.openai.com/v1/realtime?model=gpt-realtime-2` |
+| `gpt-realtime-translate` | Passthrough translator; no tools, no reasoning | `wss://api.openai.com/v1/realtime?model=gpt-realtime-translate` |
+| `gpt-realtime-whisper` | Streaming transcription only; no audio output, no reasoning | `wss://api.openai.com/v1/realtime?intent=transcription` (no `model=` query — model goes in `audio.input.transcription.model`) |
 
-Switching between them is a tear-down + re-open of the WebSocket.
-This codebase's mode switcher does exactly that. See
-[translate-mode.md](../concepts/translate-mode.md).
+Switching between `gpt-realtime-2` and `gpt-realtime-translate` is a
+tear-down + re-open of the WebSocket — same URL family, just a
+different `model=` value. This codebase's mode switcher does exactly
+that. See [translate-mode.md](../concepts/translate-mode.md).
+
+`gpt-realtime-whisper` lives at a **separate URL** (the
+`?intent=transcription` endpoint) — connecting to it as if it were a
+regular realtime session returns *"Passing a transcription session
+update event to a realtime session is not allowed."* The
+codebase has a dedicated `TranscriptionSession` class that uses the
+correct URL; see
+[realtime-models-in-use.md](realtime-models-in-use.md#3-gpt-realtime-whisper--the-transcription-specialist).
 
 ---
 

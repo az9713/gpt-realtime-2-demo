@@ -175,7 +175,11 @@ mid-session.
 **gpt-realtime-whisper** — The third GA Realtime model: streaming
 transcription only, no reasoning, no audio output. Used in this
 codebase for voicemail mode, note-taker mode, the bilingual sidecar
-in translate, and the always-on audit sidecar. See
+in translate, and the always-on audit sidecar. **Lives at a separate
+endpoint** from the conversational realtime URL —
+`wss://api.openai.com/v1/realtime?intent=transcription` — with the
+model id passed inside the session.update at
+`audio.input.transcription.model`. See
 [reference/model-feature-map.md](../reference/model-feature-map.md).
 
 **Modalities** / **output_modalities** — Which output channels the

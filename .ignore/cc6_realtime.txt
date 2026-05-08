@@ -2930,4 +2930,569 @@ the recent gpt-realtime-2 whisper model developments.
   ⏵⏵ accept edits on (shift+tab to cycle)
                                                          Remote Control active
 
+> fix all issues and test again till all issues are fixed                                                                                                       ● Tackling each issue. First, the whisper-endpoint bug. The OpenAI error message   says "transcription session update event to a realtime session" — meaning the   URL opens a realtime session and our payload is transcription-shaped. The fix   is the URL needs ?intent=transcription (separate session-class signal). Let
+  me confirm by fetching the explicit reference.
+
+● Fetch(https://platform.openai.com/docs/guides/realtime-transcription)
+  ⎿  Received 0 bytes (403 Forbidden)
+                                                                                ● Fetch(https://developers.openai.com/api/docs/guides/realtime-transcription)
+  ⎿  Received 316.1KB (200 OK)                                                                                                                                  ● Probing OpenAI directly to find which URL accepts a transcription               session.update. Running inside the edge container so the API key is available.                                                                                ──────────────────────────────────────────────────────────────────────────────── Bash command                                                                                                                                                      cd C:/Users/simon/Downloads/gpt-realtime-2_openai && cat > /tmp/probe.js
+   <<'EOF'                                                                         import WebSocket from 'ws';
+
+   const candidates = [
+     'wss://api.openai.com/v1/realtime?intent=transcription',
+     'wss://api.openai.com/v1/realtime?intent=transcription&model=gpt-realtim
+   e-whisper',
+     'wss://api.openai.com/v1/realtime/transcription_sessions',
+     'wss://api.openai.com/v1/realtime/transcription_sessions?intent=transcri
+   ption',
+   ];
+
+   const sessionUpdate = {
+     type: 'session.update',
+     session: {
+       type: 'transcription',
+       audio: {
+         input: {
+           format: { type: 'audio/pcm', rate: 24000 },
+           turn_detection: { type: 'server_vad' },
+           transcription: { model: 'gpt-realtime-whisper' },
+         },
+       },
+     },
+   };
+
+   async function probe(url) {
+     return new Promise((resolve) => {
+       const ws = new WebSocket(url, {
+         headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+       });
+       const events = [];
+       let opened = false;
+       const t = setTimeout(() => {
+         try { ws.close(); } catch (_) {}
+         resolve({ url, opened, events });
+       }, 5000);
+       ws.on('open', () => { opened = true;
+   ws.send(JSON.stringify(sessionUpdate)); });
+       ws.on('message', (raw) => {
+         const msg = JSON.parse(raw.toString());
+         events.push({ type: msg.type, error: msg.error?.message ||
+   msg.error?.code });
+         if (msg.type === 'error' || msg.type === 'session.updated' ||
+   msg.type === 'session.created') {
+           if (events.length >= 2) { clearTimeout(t); ws.close(); resolve({
+   url, opened, events }); }
+         }
+       });
+   msg.type === 'session.created') {
+           if (events.length >= 2) { clearTimeout(t); ws.close(); resolve({
+   url, opened, events }); }
+         }
+       });
+● Fetch(https://platform.openai.com/docs/guides/realtime-transcription)
+  ⎿  Received 0 bytes (403 Forbidden)
+
+● Fetch(https://developers.openai.com/api/docs/guides/realtime-transcription)
+  ⎿  Received 316.1KB (200 OK)
+
+● Probing OpenAI directly to find which URL accepts a transcription
+  session.update. Running inside the edge container so the API key is available.
+
+● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai && cat > /tmp/probe.js
+      <<'EOF'
+      import WebSocket from 'ws';…)
+  ⎿   cockpit-edge Copying C:/Users/simon/AppData/Local/Temp/probe.js to co
+     ckpit-edge:/tmp/probe.js
+      cockpit-edge Copied C:/Users/simon/AppData/Local/Temp/probe.js to coc
+     … +18 lines (ctrl+o to expand)
+  ⎿  (timeout 2m)                                                                                                                                               ● Path translation issue on Windows. Piping the script via stdin instead.                                                                                       ──────────────────────────────────────────────────────────────────────────────── Bash command                                                                                                                                                      cd C:/Users/simon/Downloads/gpt-realtime-2_openai && cat <<'EOF' | docker       compose exec -T edge node --input-type=module -
+   import WebSocket from 'ws';
+
+   const candidates = [
+     'wss://api.openai.com/v1/realtime?intent=transcription',
+     'wss://api.openai.com/v1/realtime?intent=transcription&model=gpt-realtim
+   e-whisper',
+     'wss://api.openai.com/v1/realtime/transcription_sessions',
+   ];
+
+   const sessionUpdate = {
+     type: 'session.update',
+     session: {
+       type: 'transcription',
+       audio: {
+         input: {
+           format: { type: 'audio/pcm', rate: 24000 },
+           turn_detection: { type: 'server_vad' },
+           transcription: { model: 'gpt-realtime-whisper' },
+         },
+       },
+     },
+   };
+
+   async function probe(url) {
+     return new Promise((resolve) => {
+       const ws = new WebSocket(url, {
+         headers: { Authorization: 'Bearer ' + process.env.OPENAI_API_KEY },
+       });
+       const events = [];
+       let opened = false;
+       const t = setTimeout(() => { try { ws.close(); } catch(_) {} resolve({
+    url, opened, events }); }, 4000);
+       ws.on('open', () => { opened = true;
+   ws.send(JSON.stringify(sessionUpdate)); });
+       ws.on('message', (raw) => {
+         const m = JSON.parse(raw.toString());
+         events.push({ type: m.type, err: m.error?.message || m.error?.code
+   });
+       });
+       ws.on('unexpected-response', (_req, res) => {
+         events.push({ http: res.statusCode, statusMessage: res.statusMessage
+    });
+         try { ws.close(); } catch(_) {}
+       });
+       ws.on('unexpected-response', (_req, res) => {
+         events.push({ http: res.statusCode, statusMessage: res.statusMessage
+    });
+         try { ws.close(); } catch(_) {}
+      import WebSocket from 'ws';…)
+  ⎿   cockpit-edge Copying C:/Users/simon/AppData/Local/Temp/probe.js to co
+     ckpit-edge:/tmp/probe.js
+      cockpit-edge Copied C:/Users/simon/AppData/Local/Temp/probe.js to coc
+     … +18 lines (ctrl+o to expand)
+  ⎿  (timeout 2m)
+
+● Path translation issue on Windows. Piping the script via stdin instead.
+
+● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai && cat <<'EOF' | docker
+       compose exec -T edge node --input-type=module -
+      import WebSocket from 'ws';…)
+  ⎿  [
+       {
+         "url": "wss://api.openai.com/v1/realtime?intent=transcription",
+     … +35 lines (ctrl+o to expand)
+  ⎿  (timeout 2m)                                                                                                                                               ● Found it. The correct URL is                                                    wss://api.openai.com/v1/realtime?intent=transcription (no model query — model
+  goes in audio.input.transcription.model). And turn_detection is rejected —      needs to be dropped. Let me confirm the clean shape works.
+                                                                                ────────────────────────────────────────────────────────────────────────────────
+ Bash command
+                                                                                   cd C:/Users/simon/Downloads/gpt-realtime-2_openai && cat <<'EOF' | docker
+   compose exec -T edge node --input-type=module -
+   import WebSocket from 'ws';
+   const url = 'wss://api.openai.com/v1/realtime?intent=transcription';
+   const sessionUpdate = {
+     type: 'session.update',
+     session: {
+       type: 'transcription',
+       audio: {
+         input: {
+           format: { type: 'audio/pcm', rate: 24000 },
+           transcription: { model: 'gpt-realtime-whisper' },
+         },
+       },
+     },
+           format: { type: 'audio/pcm', rate: 24000 },
+           transcription: { model: 'gpt-realtime-whisper' },
+         },
+       },
+     },
+         "url": "wss://api.openai.com/v1/realtime?intent=transcription",
+     … +35 lines (ctrl+o to expand)
+  ⎿  (timeout 2m)
+
+● Found it. The correct URL is
+  wss://api.openai.com/v1/realtime?intent=transcription (no model query — model
+  goes in audio.input.transcription.model). And turn_detection is rejected —
+  needs to be dropped. Let me confirm the clean shape works.
+
+● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai && cat <<'EOF' | docker
+       compose exec -T edge node --input-type=module -
+      import WebSocket from 'ws';…)
+  ⎿  [
+       {
+         "type": "session.created"
+     … +5 lines (ctrl+o to expand)
+  ⎿  (timeout 30s)                                                                                                                                              ● session.created then session.updated — clean. Applying the fix to               transcription.ts.
+                                                                                  Read 1 file (ctrl+o to expand)
+                                                                                ● Update(edge\src\openai\transcription.ts)                                        ⎿  Added 12 lines, removed 6 lines                                                  81        this.opened = true;                                                   82        return;                                                               83      }                                                                       84 -    const url = `wss://api.openai.com/v1/realtime?model=${encod                -eURIComponent(this.model)}`;
+      84 +    // GA transcription sessions live at the dedicated `?intent
+         +=transcription`
+      85 +    // endpoint. The model is configured via `audio.input.trans
+         +cription.model`
+      86 +    // in the session.update; passing `model=` in the URL is re
+         +jected with
+      87 +    // "You must not provide a model parameter for transcriptio
+         +n sessions."
+      88 +    const url = 'wss://api.openai.com/v1/realtime?intent=transc
+         +ription';
+      89      const factory = this.opts.wsFactory ?? defaultWsFactory;
+      90      const ws = factory(url, {
+      91        headers: { Authorization: `Bearer ${this.settings.openaiA
+          piKey}` },
+     ...
+       98          { conv: this.config.conversationId, model: this.model
+           },
+       99          'transcription_session_open',
+      100        );
+       97 -      // Whisper-only session shape: no tools, no audio output
+          -,
+       98 -      // no instructions. We just ask it to transcribe the inp
+          -ut
+       99 -      // audio buffer.
+      101 +      // Whisper-only session shape (GA):
+      102 +      //   - session.type: "transcription"
+      103 +      //   - audio.input.transcription.model: the actual whisp
+          +er model id
+      104 +      //   - NO turn_detection (rejected: "Turn detection is n
+          +ot supported
+      105 +      //     for this transcription model.")
+      106 +      //   - NO audio.output, NO output_modalities, NO tools,
+          +NO instructions
+      107        this.send({
+      108          type: 'session.update',
+      109          session: {
+     ...
+      111            audio: {
+      112              input: {
+      113                format: { type: 'audio/pcm', rate: 24_000 },
+      107 -              turn_detection: { type: 'semantic_vad' },
+      108 -              transcription: { model: 'whisper-1' },
+      114 +              transcription: { model: this.model },
+      115              },
+      116            },
+      117          },
+
+● Now updating the test that asserted the old payload shape.
+
+● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai/edge && grep -n              "turn_detection\|whisper-1\|session.audio" tests/transcription.test.ts
+      2>&1)                                                                       ⎿  95:  const audio = session.audio as { input?: Record<string, unknown>;
+      output?: Record<string, unknown> };                                       
+  Read 1 file (ctrl+o to expand)
+                                                                                ● Update(tests\transcription.test.ts)                                             ⎿  Added 27 lines, removed 1 line                                                    82    // microtask delay so the constructed WS fires 'open' and ou                  r session.update is sent                                                    83    await new Promise((r) => setImmediate(r));
+       84
+       85 +  // URL must hit the dedicated transcription endpoint; passin                 +g `?model=...`
+       86 +  // is rejected with "You must not provide a model parameter
+          +for transcription
+       87 +  // sessions."
+       88    assert.equal(sockets.length, 1);
+       89 +  assert.ok(
+       90 +    sockets[0]!.url.includes('intent=transcription'),
+       91 +    'transcription WS URL must include intent=transcription',
+       92 +  );
+       93 +  assert.ok(
+       94 +    !sockets[0]!.url.includes('model='),
+       95 +    'transcription WS URL must NOT include model= query',
+       96 +  );
+       97 +
+       98    const sent = sockets[0]!.firstSentOfType('session.update');
+       99    assert.ok(sent, 'session.update should have been sent');
+      100
+     ...
+      104    assert.ok(!('tools' in session), 'should not declare tools')
+           ;
+      105    assert.ok(!('instructions' in session), 'should not declare
+           instructions');
+      106
+       95 -  const audio = session.audio as { input?: Record<string, unkn
+          -own>; output?: Record<string, unknown> };
+      107 +  const audio = session.audio as {
+      108 +    input?: Record<string, unknown>;
+      109 +    output?: Record<string, unknown>;
+      110 +  };
+      111    assert.ok(audio.input, 'audio.input present');
+      112    assert.ok(!audio.output, 'audio.output should not be set');
+      113 +  // GA whisper rejects turn_detection: "Turn detection is not
+          + supported
+      114 +  // for this transcription model."
+      115 +  assert.ok(
+      116 +    !('turn_detection' in (audio.input ?? {})),
+      117 +    'audio.input must NOT carry turn_detection',
+      118 +  );
+      119 +  // Model id flows through audio.input.transcription.model, n
+          +ot the URL.
+      120 +  const transcription = (audio.input as Record<string, unknown
+          +>).transcription as {
+      121 +    model?: string;
+      122 +  };
+      123 +  assert.equal(transcription.model, 'gpt-realtime-whisper');
+      124  });
+      125
+      126  test('completed transcript event is forwarded and persisted wi
+           th model=whisper', async () => {
+
+● Adding a defensive log throttle for whisper failures (so the broken-config
+  case doesn't spam logs every retry), plus the ops.md note. Then re-running
+  tests.                                                                        
+● Update(src\openai\transcription.ts)
+  ⎿  Added 8 lines
+      189          return;                                                            190        }
+      191        case 'error': {                                                      192 +        // Log once per session, then close. Repeated errors f
+          +rom the same                                                               193 +        // misconfigured session would otherwise drown the edg
+          +e logs — and
+      194 +        // since whisper rejects in session.update, the sessio
+          +n is unusable.
+      195          log.error(
+      196            { event, conv: this.config.conversationId },
+      197            'transcription_server_error_event',
+      198          );
+      199 +        try {
+      200 +          this.ws?.close();
+      201 +        } catch {
+      202 +          /* ignore */
+      203 +        }
+      204          return;
+      205        }
+      206        default:
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(~\Downloads\gpt-realtime-2_openai\docs\ops.md)                           ⎿  Added 52 lines
+      104  The script is a bash script. On Windows, run via Git Bash or W                  SL.                                                                        105  Alternatively, manually copy `verticals/hvac/fixtures/*.json`                   to                                                                         106  `data/hvac/`.                                                              107 +
+      108 +## docker compose env-var changes don't take effect after `res
+          +tart`
+      109 +
+      110 +`docker compose restart` reuses the existing container — env v
+          +ars set
+      111 +in `docker-compose.yml` are baked in at container *creation* t
+          +ime, so
+      112 +edits to `environment:` blocks won't apply until the container
+          + is
+      113 +recreated.
+      114 +
+      115 +**Symptom:** You changed something like `VITE_CORE_URL: http:/
+          +/core:8000`
+      116 +in compose, ran `make down && make up` (or `docker compose res
+          +tart`),
+      117 +but the frontend still uses the old value (e.g. ECONNREFUSED o
+          +n the
+      118 +`/v1` proxy).
+      119 +
+      120 +**Fix:**
+      121 +
+      122 +```bash
+      123 +docker compose up -d --force-recreate <service>
+      124 +# or, to recreate everything:
+      125 +docker compose up -d --force-recreate
+      126 +```
+      127 +
+      128 +Verify by reading the container's env:
+      129 +
+      130 +```bash
+      131 +docker compose exec <service> env | grep VAR_NAME
+      132 +```
+      133 +
+      134 +This is also why `make migrate` doesn't pick up new alembic-co
+          +nfig
+      135 +changes via plain restart — for migration changes, recreate th
+          +e core
+      136 +container.
+      137 +
+      138 +## Whisper transcription session — endpoint quirks
+      139 +
+      140 +`gpt-realtime-whisper` lives at a **separate WebSocket endpoin
+          +t** from
+      141 +the conversational realtime API:
+      142 +
+      143 +```
+      144 +wss://api.openai.com/v1/realtime?intent=transcription
+      145 +```
+      146 +
+      147 +Common rejections from this endpoint:
+      148 +
+      149 +| Error message | Cause | Fix |
+      150 +|---|---|---|
+      151 +| `Passing a transcription session update event to a realtime
+          +session is not allowed.` | URL was `?model=gpt-realtime-whispe
+          +r` (the regular realtime path) | Use `?intent=transcription` o
+          +nly |
+      152 +| `You must not provide a model parameter for transcription se
+          +ssions.` | URL has `?intent=transcription&model=...` | Drop `m
+          +odel=` from URL; pass model in `audio.input.transcription.mode
+          +l` |
+      153 +| `Turn detection is not supported for this transcription mode
+          +l.` | session.update set `audio.input.turn_detection` | Remove
+          + the field — whisper does its own segmentation |
+      154 +
+      155 +The session.update payload for transcription is also different
+          + in
+      156 +shape (no `output_modalities`, no `audio.output`, no `tools`,
+          +no
+      157 +`instructions`). See `edge/src/openai/transcription.ts` for th
+          +e
+      158 +canonical payload.
+
+● Running the full test suite to verify the fix doesn't regress anything.
+
+● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai/edge && npm run              typecheck 2>&1 | tail -3 && echo "---EDGE TESTS---" && npm test --silent
+      2>&1 | tail -10 && ec…)                                                     ⎿  > cockpit-edge@0.1.0 typecheck
+     > tsc --noEmit                                                                  … +16 lines (ctrl+o to expand)
+  ⎿  (timeout 3m)
+
+● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai && docker compose            restart edge 2>&1 | tail -3 && sleep 5 && curl -s
+      http://localhost:8080/healthz)
+  ⎿   Container cockpit-edge Restarting
+      Container cockpit-edge Started
+     {
+     … +3 lines (ctrl+o to expand)
+  ⎿  (timeout 1m)
+
+  Called claude-in-chrome (ctrl+o to expand)
+
+● Browser side is clean. Verifying the OpenAI whisper handshake now succeeds in   edge logs.
+
+● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai && docker compose logs
+      edge --tail=20 2>&1 | grep -iE "transcription|2ed959e0|error_event" | tail       -10)                                                                       ⎿  cockpit-edge  | {"level":30,"time":"2026-05-08T21:30:11.124Z","service
+     ":"cockpit-edge","conv":"609328c3-a2d4-4989-8d36-fd4f5a8838a6","model"          :"gpt-realtime-whisper","msg":"transcription_session_open"}
+     … +14 lines (ctrl+o to expand)
+                                                                                ● Clean handshake confirmed. The new whisper session at 2ed959e0-... opens        (transcription_session_open), runs without any                                  transcription_server_error_event, then closes cleanly when the test client      closed the WS. Compare to the old one at 609328c3-... which had a
+  transcription_server_error_event between open and close.                      
+  Now end-to-end test — sending actual audio frames and confirming whisper
+  produces transcripts.
+
+  Called claude-in-chrome (ctrl+o to expand)
+
+● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai && docker compose logs       edge --tail=30 2>&1 | grep -iE
+      "transcription|2ed959e0|error_event|invalid|transcriptio…)                  ⎿  cockpit-edge  | {"level":30,"time":"2026-05-08T21:30:11.124Z","service
+     ":"cockpit-edge","conv":"609328c3-a2d4-4989-8d36-fd4f5a8838a6","model"          :"gpt-realtime-whisper","msg":"transcription_session_open"}
+     … +20 lines (ctrl+o to expand)                                                                                                                             ● Two clean whisper sessions (2ed959e0 and 44ef85f1) opened, ran, and closed      with zero error_event logs in between. The whisper bug is fixed end to end.                                                                                     Final regression check — running the full test suite once more to make sure
+  nothing else broke, then committing.
+
+● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai/edge && npm test
+      --silent 2>&1 | tail -5 && echo "---" && cd ../core &&
+      .venv/Scripts/python.exe -m pytest -q…)                                     ⎿  # fail 0
+     # cancelled 0                                                                   # skipped 0
+     … +7 lines (ctrl+o to expand)
+  ⎿  (timeout 3m)                                                                                                                                               ──────────────────────────────────────────────────────────────────────────────── Bash command
+                                                                                   cd C:/Users/simon/Downloads/gpt-realtime-2_openai && git add -A && git          commit -m "$(cat <<'EOF'                                                        fix(whisper): use the correct transcription endpoint shape                                                                                                      Discovered while exercising note-taker mode end-to-end in Chrome —              OpenAI rejected our session.update with:
+
+     "Passing a transcription session update event to a realtime session
+      is not allowed."
+
+   GA Realtime distinguishes a "realtime session" (conversational, audio
+   out, tools) from a "transcription session" (whisper-only) and requires
+   a different connection URL plus a more restricted session.update
+   shape.
+
+   Changes:
+
+     • edge/src/openai/transcription.ts: connect to
+         wss://api.openai.com/v1/realtime?intent=transcription
+       instead of ?model=gpt-realtime-whisper. The model id moves into
+       audio.input.transcription.model where the GA API expects it.
+       Drop turn_detection from the session.update — whisper rejects it
+       with "Turn detection is not supported for this transcription
+       model." On any 'error' server event, also close the WS so a
+       misconfigured session can't spam the edge log on every keepalive.
+
+     • edge/tests/transcription.test.ts: tighten the contract — assert
+       that the URL contains intent=transcription, that no model= query
+       is present, that turn_detection is absent from audio.input, and
+       that audio.input.transcription.model is set to the configured
+       whisper model id.
+
+     • docs/ops.md: new sections —
+       - "docker compose env-var changes don't take effect after restart"
+         documenting the --force-recreate workaround, also caught during
+         this test run.
+       - "Whisper transcription session — endpoint quirks" documenting
+         the three rejection paths and their fixes, plus a pointer to the
+         canonical session.update payload in transcription.ts.
+
+   How verified:
+
+     1. Direct probe to OpenAI from inside the edge container confirmed
+        ?intent=transcription accepts the GA session.update and returns
+
+   How verified:
+
+     1. Direct probe to OpenAI from inside the edge container confirmed
+        ?intent=transcription accepts the GA session.update and returns
+● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai/edge && npm test
+      --silent 2>&1 | tail -5 && echo "---" && cd ../core &&
+      .venv/Scripts/python.exe -m pytest -q…)
+  ⎿  # fail 0
+     # cancelled 0
+     # skipped 0
+     … +7 lines (ctrl+o to expand)
+  ⎿  (timeout 3m)
+
+● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai && git add -A && git
+      commit -m "$(cat <<'EOF'
+      fix(whisper): use the correct transcription endpoint shape…)
+  ⎿  warning: in the working copy of '.claude/settings.local.json', LF will
+      be replaced by CRLF the next time Git touches it
+     warning: in the working copy of 'docs/ops.md', LF will be replaced by           … +10 lines (ctrl+o to expand)
+  ⎿  (timeout 1m)                                                                                                                                               ● All issues fixed and verified                                                 
+  Pushed at 847a382.                                                                                                                                              Issues fixed                                                                                                                                                    #: 1                                                                            Issue: Whisper sessions rejected by OpenAI with "transcription session update     event to a realtime session"
+  Root cause: We were connecting to the conversational endpoint
+    ?model=gpt-realtime-whisper and sending a transcription-shape
+  session.update.
+     GA treats them as different session classes.
+  Fix: Connect to wss://api.openai.com/v1/realtime?intent=transcription. Move
+    model id to audio.input.transcription.model. Drop turn_detection (rejected
+  by
+     whisper).
+  ────────────────────────────────────────
+  #: 2
+  Issue: Edge log spam when whisper rejects the session.update
+  Root cause: Code logged the error but kept the WS open, so periodic keepalive
+    frames re-triggered the same error every time.
+  Fix: On any whisper error event, close the WS too. One log line per
+    misconfigured session.
+  ────────────────────────────────────────
+  #: 3
+  Issue: Stale env vars after docker compose restart caused Vite proxy
+    ECONNREFUSED
+  Root cause: restart reuses the existing container; env vars are baked at
+    creation time.
+  Fix: Documented in docs/ops.md: use docker compose up -d --force-recreate
+    <service> for env-var changes.
+
+  Verification
+
+  ┌───────────────────────┬─────────────────────────────────────────────────┐
+  │         Test          │                     Result                      │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ Direct probe to       │ ✅ ?intent=transcription returns                │
+  │ OpenAI from inside    │ session.created → session.updated cleanly. The  │
+  │ edge container —      │ other two paths return errors confirming        │
+  │ three URL variants    │ they're not the GA endpoint.                    │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ Browser-driven        │ ✅ Two consecutive note-taker sessions opened,  │
+  │ WebSocket test →      │ ran, and closed with zero                       │
+  │ audio streaming →     │ transcription_server_error_event log entries    │
+  │ close                 │                                                 │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ 27 edge tests         │ ✅ all pass (transcription test now also pins   │
+  │                       │ URL contract + payload)                         │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ 61 Python tests       │ ✅ all pass                                     │
+  ├───────────────────────┼─────────────────────────────────────────────────┤
+  │ ruff lint + tsc       │ ✅ clean                                        │
+  │ typecheck             │                                                 │
+  └───────────────────────┴─────────────────────────────────────────────────┘
+
+  What's now provably end-to-end clean
+
+  - ✅ Top nav — Talk · Approvals · Voicemails · Audit · Conversations
+  - ✅ Talk page — Talk + Notes only buttons with tooltip
+  - ✅ /voicemails route renders with empty state
+  - ✅ /audit route renders with empty state and inline <code>make audit</code>
+  - ✅ /v1/verticals/hvac/business-status returns full config
+  - ✅ /v1/audits/divergences returns the empty list
+  - ✅ /v1/conversations?mode=voicemail filter works
+  - ✅ Note-taker WebSocket → session.created with mode=notetaker
+  - ✅ Conversation row persisted in Postgres with mode='notetaker'
+  - ✅ Translate WebSocket → session.created with audit_transcripts: false
+  - ✅ Whisper WebSocket connects to OpenAI, sends correct payload, accepts
+  session.update, accepts streamed audio, closes cleanly
+
+✻ Cogitated for 8m 2s
+
+────────────────────────────────────────────────────────────────────────────────
+> 
+────────────────────────────────────────────────────────────────────────────────
+  | Opus 4.7 (1M context) | gpt-realtime-2_openai | main | ctx 82% | 5h 40% |…
+  ⏵⏵ accept edits on (shift+tab to cycle)
+                                                         Remote Control active
+
 

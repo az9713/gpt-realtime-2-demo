@@ -125,7 +125,15 @@ flow.
 | Env var | `OPENAI_WHISPER_MODEL=gpt-realtime-whisper` |
 | Edge settings | `edge/src/settings.ts` → `openaiWhisperModel` |
 | Class | `edge/src/openai/transcription.ts` → `TranscriptionSession` |
-| WebSocket open | Same URL pattern, transcription-only `session.update` (no `output_modalities`, no `tools`, no `instructions`) |
+| WebSocket open | **Different URL** from realtime-2: `wss://api.openai.com/v1/realtime?intent=transcription`. Model id flows in `audio.input.transcription.model`, **not** the URL. |
+| Session.update payload | `session.type: "transcription"`; no `output_modalities`, no `tools`, no `instructions`, no `audio.output`, **no `turn_detection`** (whisper rejects it). |
+
+GA distinguishes "realtime sessions" (conversational, audio out, tools)
+from "transcription sessions" (whisper-only) at the URL level. Connecting
+to `?model=gpt-realtime-whisper` returns *"Passing a transcription
+session update event to a realtime session is not allowed."* See
+[`docs/ops.md`](../ops.md#whisper-transcription-session--endpoint-quirks)
+for the full rejection table.
 
 The `TranscriptionSession` class is mode-agnostic; whether it runs
 solo or sidecar is decided by the caller (`signaling.ts`,

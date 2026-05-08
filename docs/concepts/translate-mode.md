@@ -205,11 +205,16 @@ source-language — distinguished by `turns.model`.
 inbound audio frames
         │
         ├──► RealtimeSession (gpt-realtime-translate)
+        │       wss://api.openai.com/v1/realtime?model=gpt-realtime-translate
         │            │
         │            ▼
         │     POST /transcript (model='gpt-realtime-translate', target language)
         │
         └──► TranscriptionSession (gpt-realtime-whisper)
+                wss://api.openai.com/v1/realtime?intent=transcription
+                (note: different URL family — transcription sessions are a
+                 distinct GA session class. Model id passes via
+                 session.update, not the URL.)
                      │
                      ▼
               POST /transcript (model='whisper', source language)

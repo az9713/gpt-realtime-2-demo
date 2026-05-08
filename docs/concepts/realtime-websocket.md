@@ -183,16 +183,31 @@ the call is dead.
 
 ## The OpenAI Realtime WebSocket protocol (GA)
 
-The edge opens this WebSocket per call:
+The edge opens **one or two** WebSockets per call to OpenAI, depending
+on the session shape:
 
 ```
-URL: wss://api.openai.com/v1/realtime?model=gpt-realtime-2
-Headers:
-  Authorization: Bearer <OPENAI_API_KEY>
+Realtime (conversational, gpt-realtime-2 / gpt-realtime-translate)
+  URL: wss://api.openai.com/v1/realtime?model=<model id>
+  Headers: Authorization: Bearer <OPENAI_API_KEY>
+
+Transcription (whisper-only — for voicemail, note-taker, sidecars)
+  URL: wss://api.openai.com/v1/realtime?intent=transcription
+  Headers: Authorization: Bearer <OPENAI_API_KEY>
+  Note: model id moves into the session.update payload at
+        audio.input.transcription.model, NOT the URL.
 ```
 
 Note: in the **GA** API, **the `OpenAI-Beta: realtime=v1` header is
 gone**. Sending it will not break anything, but it's not required.
+
+The two WebSocket families share a `session.update` family of events
+but have different shapes (transcription drops `output_modalities`,
+`tools`, `instructions`, `audio.output`, and `turn_detection`).
+Connecting to the wrong URL for the wrong session type returns
+*"Passing a transcription session update event to a realtime session
+is not allowed"* — see [docs/ops.md](../ops.md#whisper-transcription-session--endpoint-quirks)
+for the full rejection table.
 
 After the WS opens, send `session.update` to configure the session:
 
