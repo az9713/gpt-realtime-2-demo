@@ -3495,4 +3495,376 @@ the recent gpt-realtime-2 whisper model developments.
   ⏵⏵ accept edits on (shift+tab to cycle)
                                                          Remote Control active
 
+ Cogitated for 8m 2s
+
+> update all docs up-to-date with the updated codebase                          
+● Auditing which docs mention the whisper endpoint shape, then updating each.
+
+  Searched for 4 patterns, read 1 file (ctrl+o to expand)                                                                                                       ● Reading the key sections that need updates.                                   
+  Read 3 files (ctrl+o to expand)                                                                                                                               ● Now applying the doc updates in sequence.                                                                                                                     ● Update(docs\reference\realtime-models-in-use.md)                                ⎿  Added 9 lines, removed 1 line                                                    125  | Env var | `OPENAI_WHISPER_MODEL=gpt-realtime-whisper` |                  126  | Edge settings | `edge/src/settings.ts` → `openaiWhisperModel                  ` |                                                                        127  | Class | `edge/src/openai/transcription.ts` → `TranscriptionS
+           ession` |
+      128 -| WebSocket open | Same URL pattern, transcription-only `sessi
+          -on.update` (no `output_modalities`, no `tools`, no `instructio
+          -ns`) |
+      128 +| WebSocket open | **Different URL** from realtime-2: `wss://a
+          +pi.openai.com/v1/realtime?intent=transcription`. Model id flow
+          +s in `audio.input.transcription.model`, **not** the URL. |
+      129 +| Session.update payload | `session.type: "transcription"`; no
+          + `output_modalities`, no `tools`, no `instructions`, no `audio
+          +.output`, **no `turn_detection`** (whisper rejects it). |
+      130
+      131 +GA distinguishes "realtime sessions" (conversational, audio ou
+          +t, tools)
+      132 +from "transcription sessions" (whisper-only) at the URL level.
+          + Connecting
+      133 +to `?model=gpt-realtime-whisper` returns *"Passing a transcrip
+          +tion
+      134 +session update event to a realtime session is not allowed."* S
+          +ee
+      135 +[`docs/ops.md`](../ops.md#whisper-transcription-session--endpo
+          +int-quirks)
+      136 +for the full rejection table.
+      137 +
+      138  The `TranscriptionSession` class is mode-agnostic; whether it
+           runs
+      139  solo or sidecar is decided by the caller (`signaling.ts`,
+      140  `media-stream.ts`, `session.ts`).
+
+● Update(docs\reference\gpt-realtime-2.md)
+  ⎿  Added 15 lines, removed 5 lines
+      59                                                                              60  | Model | Purpose | Endpoint |
+      61  |---|---|---|                                                               62 -| `gpt-realtime-2` | Conversational default; reasons, calls too
+         -ls | `?model=gpt-realtime-2` |
+      63 -| `gpt-realtime-translate` | Passthrough translator; no tools,
+         -no reasoning | `?model=gpt-realtime-translate` |
+      62 +| `gpt-realtime-2` | Conversational default; reasons, calls too
+         +ls | `wss://api.openai.com/v1/realtime?model=gpt-realtime-2` |
+      63 +| `gpt-realtime-translate` | Passthrough translator; no tools,
+         +no reasoning | `wss://api.openai.com/v1/realtime?model=gpt-real
+         +time-translate` |
+      64 +| `gpt-realtime-whisper` | Streaming transcription only; no aud
+         +io output, no reasoning | `wss://api.openai.com/v1/realtime?int
+         +ent=transcription` (no `model=` query — model goes in `audio.in
+         +put.transcription.model`) |
+      65
+      65 -Switching between them is a tear-down + re-open of the WebSocke
+         -t.
+      66 -This codebase's mode switcher does exactly that. See
+      67 -[translate-mode.md](../concepts/translate-mode.md).
+      66 +Switching between `gpt-realtime-2` and `gpt-realtime-translate`
+         + is a
+      67 +tear-down + re-open of the WebSocket — same URL family, just a
+      68 +different `model=` value. This codebase's mode switcher does ex
+         +actly
+      69 +that. See [translate-mode.md](../concepts/translate-mode.md).
+      70
+      71 +`gpt-realtime-whisper` lives at a **separate URL** (the
+      72 +`?intent=transcription` endpoint) — connecting to it as if it w
+         +ere a
+      73 +regular realtime session returns *"Passing a transcription sess
+         +ion
+      74 +update event to a realtime session is not allowed."* The
+      75 +codebase has a dedicated `TranscriptionSession` class that uses
+         + the
+      76 +correct URL; see
+      77 +[realtime-models-in-use.md](realtime-models-in-use.md#3-gpt-rea
+         +ltime-whisper--the-transcription-specialist).
+      78 +
+      79  ---
+      80
+      81  ## The session vs the conversation
+
+● Update(docs\concepts\realtime-websocket.md)
+  ⎿  Added 19 lines, removed 4 lines
+      183                                                                             184  ## The OpenAI Realtime WebSocket protocol (GA)
+      185                                                                             186 -The edge opens this WebSocket per call:
+      186 +The edge opens **one or two** WebSockets per call to OpenAI, d
+          +epending
+      187 +on the session shape:
+      188
+      189  ```
+      189 -URL: wss://api.openai.com/v1/realtime?model=gpt-realtime-2
+      190 -Headers:
+      191 -  Authorization: Bearer <OPENAI_API_KEY>
+      190 +Realtime (conversational, gpt-realtime-2 / gpt-realtime-transl
+          +ate)
+      191 +  URL: wss://api.openai.com/v1/realtime?model=<model id>
+      192 +  Headers: Authorization: Bearer <OPENAI_API_KEY>
+      193 +
+      194 +Transcription (whisper-only — for voicemail, note-taker, sidec
+          +ars)
+      195 +  URL: wss://api.openai.com/v1/realtime?intent=transcription
+      196 +  Headers: Authorization: Bearer <OPENAI_API_KEY>
+      197 +  Note: model id moves into the session.update payload at
+      198 +        audio.input.transcription.model, NOT the URL.
+      199  ```
+      200
+      201  Note: in the **GA** API, **the `OpenAI-Beta: realtime=v1` head
+           er is
+      202  gone**. Sending it will not break anything, but it's not requi
+           red.
+      203
+      204 +The two WebSocket families share a `session.update` family of
+          +events
+      205 +but have different shapes (transcription drops `output_modalit
+          +ies`,
+      206 +`tools`, `instructions`, `audio.output`, and `turn_detection`)
+          +.
+      207 +Connecting to the wrong URL for the wrong session type returns
+      208 +*"Passing a transcription session update event to a realtime s
+          +ession
+      209 +is not allowed"* — see [docs/ops.md](../ops.md#whisper-transcr
+          +iption-session--endpoint-quirks)
+      210 +for the full rejection table.
+      211 +
+      212  After the WS opens, send `session.update` to configure the ses
+           sion:
+      213
+      214  ```json
+
+● Now the three concept docs (voicemail, note-taker, audit-transcripts) and the
+  model-feature-map. Each should mention the correct endpoint for its whisper
+  session.                                                                      
+  Searched for 2 patterns, read 1 file (ctrl+o to expand)                       
+● Update(docs\reference\model-feature-map.md)
+  ⎿  Added 7 lines
+      77  features. The shared class is `TranscriptionSession`                        78  (`edge/src/openai/transcription.ts`).                                       79                                                                              80 +| Aspect | Notes |                                                          81 +|---|---|
+      82 +| Endpoint | `wss://api.openai.com/v1/realtime?intent=transcrip
+         +tion` (no `model=` query) |
+      83 +| Model selector | `audio.input.transcription.model` in the ses
+         +sion.update payload |
+      84 +| session.update shape | `session.type: "transcription"`; no `o
+         +utput_modalities`, `tools`, `instructions`, `audio.output`, or
+         +`turn_detection` |
+      85 +| Why a different URL | GA distinguishes "realtime sessions" fr
+         +om "transcription sessions" at the URL level. See [docs/ops.md]
+         +(../ops.md#whisper-transcription-session--endpoint-quirks). |
+      86 +
+      87  ### Feature 1 — Voicemail / overflow handler (solo)
+      88
+      89  | Aspect | Lives in |
+
+● Now the three concept docs — voicemail, note-taker, audit-transcripts — each
+  gets a concise note about the dedicated endpoint.
+                                                                                ● Update(docs\concepts\voicemail.md)
+  ⎿  File must be read first                                                                                                                                    ● Update(docs\concepts\note-taker.md)
+  ⎿  File must be read first                                                                                                                                      Read 1 file (ctrl+o to expand)                                                                                                                                ● Update(docs\concepts\voicemail.md)                                              ⎿  Added 6 lines, removed 1 line                                                    70       • POSTs /v1/sessions { surface:'phone', vertical:'hvac', m                 ode:'voicemail' }                                                           71         Core creates the conversations row but does NOT attach a                 n agent                                                                     72         runtime (mode is in _AGENTLESS_MODES).                               73 -     • Opens a TranscriptionSession solo (whisper-only WS).
+      73 +     • Opens a TranscriptionSession solo. The whisper WebSocket
+      74 +       connects to wss://api.openai.com/v1/realtime?intent=tran
+         +scription
+      75 +       — a separate URL from the conversational endpoint, with
+         +the
+      76 +       model id passed in the session.update at
+      77 +       audio.input.transcription.model (see
+      78 +       reference/realtime-models-in-use.md).
+      79
+      80  8. Twilio streams the caller's audio. Edge decodes μ-law,
+      81     resamples 8 kHz → 24 kHz, base64-encodes, forwards to whispe
+          r.
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(docs\concepts\note-taker.md)                                             ⎿  Added 4 lines, removed 1 line
+      39  In code: `edge/src/webrtc/signaling.ts` branches on the `mode`                  query                                                                       40  param. `mode=notetaker` calls `startNotetakerSession()` instead                  of                                                                         41  `startAgentSession()`; the former opens a `TranscriptionSession                 `
+      42 -directly with no `RealtimeSession` ever instantiated.
+      42 +directly with no `RealtimeSession` ever instantiated. The whisp
+         +er
+      43 +WebSocket connects to `wss://api.openai.com/v1/realtime?intent=
+         +transcription`
+      44 +(distinct from the conversational endpoint — see
+      45 +[reference/realtime-models-in-use.md](../reference/realtime-mod
+         +els-in-use.md)).
+      46
+      47  ---
+      48
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(docs\concepts\audit-transcripts.md)                                      ⎿  Added 5 lines
+      45  - `RealtimeSession.shouldHaveSidecar()` returns true unconditio                 nally.                                                                      46  - The sidecar opens **at session start in parallel** with the p                 rimary                                                                      47    WS — `Promise.all([primary.open(), sidecar.open()])` — not la                 zily.
+      48 +- The sidecar's WebSocket connects to
+      49 +  `wss://api.openai.com/v1/realtime?intent=transcription` — a d
+         +ifferent
+      50 +  URL from the conversational endpoint (the GA API treats trans
+         +cription
+      51 +  as a distinct session class). Model id passes via the session
+         +.update
+      52 +  payload, not the URL.
+      53
+      54  Why parallel and not lazy: for translate-mode bilingual capture
+          , lazy
+      55  opening hides latency behind the user's first utterance; for au
+          dit,
+
+● Translate-mode (bilingual capture mention) and key-concepts entry too.
+
+  Searched for 2 patterns, read 1 file (ctrl+o to expand)
+
+● Update(docs\concepts\translate-mode.md)
+  ⎿  Added 5 lines
+      205  inbound audio frames
+      206          │                                                                  207          ├──► RealtimeSession (gpt-realtime-translate)                      208 +        │       wss://api.openai.com/v1/realtime?model=gpt-rea                 +ltime-translate                                                            209          │            │
+      210          │            ▼
+      211          │     POST /transcript (model='gpt-realtime-translate'
+           , target language)
+      212          │
+      213          └──► TranscriptionSession (gpt-realtime-whisper)
+      214 +                wss://api.openai.com/v1/realtime?intent=transc
+          +ription
+      215 +                (note: different URL family — transcription se
+          +ssions are a
+      216 +                 distinct GA session class. Model id passes vi
+          +a
+      217 +                 session.update, not the URL.)
+      218                       │
+      219                       ▼
+      220                POST /transcript (model='whisper', source langua
+           ge)
+
+  Read 1 file (ctrl+o to expand)
+
+● Update(docs\overview\key-concepts.md)                                           ⎿  Added 5 lines, removed 1 line
+      175  **gpt-realtime-whisper** — The third GA Realtime model: stream                  ing                                                                        176  transcription only, no reasoning, no audio output. Used in thi                  s                                                                          177  codebase for voicemail mode, note-taker mode, the bilingual si                  decar
+      178 -in translate, and the always-on audit sidecar. See
+      178 +in translate, and the always-on audit sidecar. **Lives at a se
+          +parate
+      179 +endpoint** from the conversational realtime URL —
+      180 +`wss://api.openai.com/v1/realtime?intent=transcription` — with
+          + the
+      181 +model id passed inside the session.update at
+      182 +`audio.input.transcription.model`. See
+      183  [reference/model-feature-map.md](../reference/model-feature-ma
+           p.md).
+      184
+      185  **Modalities** / **output_modalities** — Which output channels
+            the
+
+● Last: validate cross-links and that no doc still claims "Same URL pattern" or
+  similar stale wording for whisper.
+                                                                                  Searched for 1 pattern (ctrl+o to expand)
+                                                                                ● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai/docs && grep -rE             "intent=transcription" *.md concepts/ reference/ overview/ guides/              architecture/ 2>&1 | wc -l…)                                                ⎿  13                                                                              ---
+     21
+                                                                                ● Both remaining mentions of model=gpt-realtime-whisper are in negative-context   (showing what NOT to do — the rejection table in ops.md and the rationale in    realtime-models-in-use.md). 13 files now consistently mention                   intent=transcription. Committing.                                                                                                                             ──────────────────────────────────────────────────────────────────────────────── Bash command                                                                                                                                                      cd C:/Users/simon/Downloads/gpt-realtime-2_openai && git add -A && git
+   commit -m "$(cat <<'EOF'
+   docs: bring docs in sync with the whisper-endpoint fix
+
+   The Phase-1-through-6 docs described the whisper WebSocket as
+   opening with the same URL pattern as realtime-2 (?model=...). After
+   the recent fix in edge/src/openai/transcription.ts, whisper sessions
+   actually live at a dedicated endpoint
+   (?intent=transcription); the model id moves into the session.update
+   payload, and turn_detection is rejected.
+
+   Files updated to reflect the corrected wire protocol:
+
+     • docs/reference/realtime-models-in-use.md — replaced "Same URL
+       pattern" claim with the actual URL + payload constraints, plus a
+       pointer to the rejection table in ops.md.
+
+     • docs/reference/gpt-realtime-2.md — Companion-models table now
+       lists the dedicated transcription endpoint as a third row;
+       follow-up paragraph explains why whisper has its own URL.
+
+     • docs/concepts/realtime-websocket.md — "OpenAI Realtime WebSocket
+       protocol (GA)" section now documents both endpoint families
+       (realtime + transcription) side-by-side.
+
+     • docs/reference/model-feature-map.md — added a leading
+       "wire protocol" sub-table for the whisper section listing the
+       endpoint, model selector, payload shape, and the URL-class
+       rationale.
+
+     • docs/concepts/voicemail.md — flow step 7 now names the dedicated
+       URL the TranscriptionSession opens.
+
+     • docs/concepts/note-taker.md — same, in the "differs from Talk"
+       paragraph.
+
+     • docs/concepts/audit-transcripts.md — "When does it activate"
+       bullet list adds the whisper endpoint detail.
+
+     • docs/concepts/translate-mode.md — bilingual capture diagram now
+
+     • docs/concepts/audit-transcripts.md — "When does it activate"
+       bullet list adds the whisper endpoint detail.
+
+     • docs/concepts/translate-mode.md — bilingual capture diagram now
+  ⎿  13
+     ---
+     21
+
+● Both remaining mentions of model=gpt-realtime-whisper are in negative-context
+  (showing what NOT to do — the rejection table in ops.md and the rationale in
+  realtime-models-in-use.md). 13 files now consistently mention
+  intent=transcription. Committing.
+
+● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai && git add -A && git
+      commit -m "$(cat <<'EOF'
+      docs: bring docs in sync with the whisper-endpoint fix…)
+  ⎿  warning: in the working copy of 'docs/overview/key-concepts.md', LF will be
+      replaced by CRLF the next time Git touches it
+     warning: in the working copy of 'docs/reference/gpt-realtime-2.md', LF will      be replaced by CRLF the next time Git touches it
+     +5 lines (25s · timeout 1m)                                                     (ctrl+b to run in background)                                                                                                                              * Processing… (3m 58s · ↓ 12.3k tokens)
+
+────────────────────────────────────────────────────────────────────────────────> 
+────────────────────────────────────────────────────────────────────────────────
+  | Opus 4.7 (1M context) | docs | main | ctx 85% | 5h 41% | 7d 29% |
+
+
+
+
+● Both remaining mentions of model=gpt-realtime-whisper are in negative-context
+  (showing what NOT to do — the rejection table in ops.md and the rationale in
+  realtime-models-in-use.md). 13 files now consistently mention
+  intent=transcription. Committing.
+
+● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai && git add -A && git
+      commit -m "$(cat <<'EOF'
+      docs: bring docs in sync with the whisper-endpoint fix…)
+  ⎿  warning: in the working copy of 'docs/concepts/audit-transcripts.md',
+     LF will be replaced by CRLF the next time Git touches it
+     warning: in the working copy of 'docs/concepts/note-taker.md', LF will          … +17 lines (ctrl+o to expand)
+  ⎿  (timeout 1m)                                                                                                                                               ● Pushed at 192ce79. 9 doc files synced with the corrected wire protocol:       
+  ✓ Cross-links verified                                                          ✓ No stubs detected                                                             ✓ Stale "?model=gpt-realtime-whisper" claims removed (only remain in               negative-context: the rejection table + the historical rationale)            ✓ 13 files now consistently reference ?intent=transcription                                                                                                     File: docs/reference/realtime-models-in-use.md
+  What changed: Removed "Same URL pattern" claim. Added explicit URL + payload
+    constraints. Linked to ops.md rejection table.
+  ────────────────────────────────────────
+  File: docs/reference/gpt-realtime-2.md
+  What changed: Companion-models table now has 3 rows (added whisper at its
+    dedicated endpoint). Follow-up paragraph explains the URL-class distinction.
+  ────────────────────────────────────────
+  File: docs/reference/model-feature-map.md
+  What changed: Added a wire-protocol sub-table at the top of the whisper
+    section.
+  ────────────────────────────────────────
+  File: docs/concepts/realtime-websocket.md
+  What changed: "OpenAI Realtime WebSocket protocol (GA)" now documents both
+    endpoint families side-by-side.
+  ────────────────────────────────────────
+  File: docs/concepts/voicemail.md
+  What changed: End-to-end flow step 7 now names the dedicated URL.
+  ────────────────────────────────────────
+  File: docs/concepts/note-taker.md
+  What changed: "Differs from Talk" paragraph notes the dedicated whisper URL.
+  ────────────────────────────────────────
+  File: docs/concepts/audit-transcripts.md
+  What changed: "When does it activate" bullet list adds the endpoint detail.
+  ────────────────────────────────────────
+  File: docs/concepts/translate-mode.md
+  What changed: Bilingual capture diagram annotates each session with its URL.
+  ────────────────────────────────────────
+  File: docs/overview/key-concepts.md
+  What changed: gpt-realtime-whisper glossary entry documents the separate
+    endpoint.
+
+  Docs are now in sync with the working code at commit 192ce79.
+
+✻ Churned for 4m 22s
+
+────────────────────────────────────────────────────────────────────────────────
+> test all features again to confirm everything works
+────────────────────────────────────────────────────────────────────────────────
+  | Opus 4.7 (1M context) | gpt-realtime-2_openai | main | ctx 85% | 5h 41% |…
+  ⏵⏵ accept edits on (shift+tab to cycle)
+                                                         Remote Control active
 
