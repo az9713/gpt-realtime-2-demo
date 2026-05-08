@@ -1,0 +1,21 @@
+id: voicemail_after_hours
+description: |
+  Outside business hours, the Twilio webhook serves a voicemail TwiML
+  instead of the agent TwiML. The caller hears the greeting, leaves a
+  message, and the post_call hook emits a voicemail-shape summary.
+  No tools fire; no agent reasoning; no approvals.
+vertical: hvac
+surface: phone
+language: en
+
+user_inputs:
+  - "Hi, my AC isn't cooling. Please call me back at 512-555-0123."
+
+actions:
+  - kind: mode
+    mode: voicemail
+
+expected_tool_calls: []
+expected_approvals: []
+expected_mode: voicemail
+expected_no_pii: true

@@ -5,6 +5,7 @@ modes:
   - realtime2
   - translate
   - notetaker
+  - voicemail
 surfaces:
   - browser
   - phone
@@ -24,3 +25,14 @@ surfaces_meta:
     primary: true
   browser:
     primary: false  # for the human dispatcher
+
+# Phase 4: business hours. Outside these the Twilio webhook serves the
+# voicemail TwiML instead of the agent TwiML. Default off (no voicemail
+# overflow). Days: ISO weekday, 1=Monday … 7=Sunday.
+business_hours:
+  tz: America/Chicago
+  open: "09:00"
+  close: "17:00"
+  days: [1, 2, 3, 4, 5]
+
+voicemail_greeting: voicemail.md

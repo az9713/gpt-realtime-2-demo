@@ -28,6 +28,32 @@ export function buildRejectTwiml(message: string): string {
 </Response>`;
 }
 
+/**
+ * Phase 4 voicemail TwiML: speak the greeting, then bridge into the
+ * media-stream WebSocket with `mode=voicemail` so the edge opens a
+ * whisper-only TranscriptionSession (not a RealtimeSession).
+ */
+export function buildVoicemailTwiml(
+  settings: Settings,
+  vertical: string | undefined,
+  greeting: string,
+): string {
+  const wsUrl = settings.publicBaseUrl.replace(/^http/, 'ws') + '/twilio/media-stream';
+  const verticalParam = vertical
+    ? `<Parameter name="vertical" value="${escapeXml(vertical)}"/>`
+    : '';
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="alice">${escapeXml(greeting)}</Say>
+  <Connect>
+    <Stream url="${escapeXml(wsUrl)}">
+      ${verticalParam}
+      <Parameter name="mode" value="voicemail"/>
+    </Stream>
+  </Connect>
+</Response>`;
+}
+
 function escapeXml(text: string): string {
   return text
     .replace(/&/g, '&amp;')

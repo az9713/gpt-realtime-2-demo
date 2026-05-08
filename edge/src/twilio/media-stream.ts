@@ -3,6 +3,7 @@ import type WebSocket from 'ws';
 import type { Settings } from '../settings.js';
 import type { CoreClient } from '../core-client/index.js';
 import { RealtimeSession } from '../openai/session.js';
+import { TranscriptionSession } from '../openai/transcription.js';
 import { dropSession, registerSession } from '../openai/sessions-registry.js';
 import {
   base64ToPcm16,
@@ -24,6 +25,7 @@ interface TwilioMediaEvent {
 export function registerTwilioMediaStream(app: FastifyInstance, settings: Settings): void {
   app.get('/twilio/media-stream', { websocket: true }, (socket: WebSocket, _request) => {
     let session: RealtimeSession | null = null;
+    let voicemail: TranscriptionSession | null = null;
     let conversationId: string | null = null;
     let streamSid: string | null = null;
     const core = (app as unknown as { _core?: CoreClient })._core;
@@ -42,7 +44,7 @@ export function registerTwilioMediaStream(app: FastifyInstance, settings: Settin
       });
     };
 
-    const startSession = async (vertical: string | undefined): Promise<void> => {
+    const startAgentSession = async (vertical: string | undefined): Promise<void> => {
       if (!core) throw new Error('core client not registered');
       const config = await core.createSession({
         surface: 'phone',
@@ -57,6 +59,24 @@ export function registerTwilioMediaStream(app: FastifyInstance, settings: Settin
       startVoiceIntent(config.conversation_id, settings, core);
     };
 
+    const startVoicemailSession = async (vertical: string | undefined): Promise<void> => {
+      if (!core) throw new Error('core client not registered');
+      const config = await core.createSession({
+        surface: 'phone',
+        mode: 'voicemail',
+        ...(vertical !== undefined ? { vertical } : {}),
+      });
+      conversationId = config.conversation_id;
+      voicemail = new TranscriptionSession(settings, core, {
+        conversationId: config.conversation_id,
+      });
+      await voicemail.open();
+      log.info(
+        { conv: config.conversation_id, vertical },
+        'voicemail_session_started',
+      );
+    };
+
     socket.on('message', (raw: WebSocket.RawData) => {
       let event: TwilioMediaEvent;
       try {
@@ -68,19 +88,30 @@ export function registerTwilioMediaStream(app: FastifyInstance, settings: Settin
         case 'start': {
           streamSid = event.start?.streamSid ?? null;
           const vertical = event.start?.customParameters?.vertical;
-          void startSession(vertical).catch((err) =>
-            log.error({ err }, 'twilio_start_failed'),
-          );
+          const mode = event.start?.customParameters?.mode;
+          if (mode === 'voicemail') {
+            void startVoicemailSession(vertical).catch((err) =>
+              log.error({ err }, 'twilio_voicemail_start_failed'),
+            );
+          } else {
+            void startAgentSession(vertical).catch((err) =>
+              log.error({ err }, 'twilio_start_failed'),
+            );
+          }
           return;
         }
         case 'media': {
-          if (!session || !event.media) return;
+          if (!event.media) return;
           const muLawBuf = Buffer.from(event.media.payload, 'base64');
           const pcm8 = muLawToPcm16(muLawBuf);
           const pcm24 = resamplePcm16(pcm8, 8_000, 24_000);
           const b64 = pcm16ToBase64(pcm24);
-          session.appendAudio(b64);
-          feedAudio(session.conversationId, b64);
+          if (session) {
+            session.appendAudio(b64);
+            feedAudio(session.conversationId, b64);
+          } else if (voicemail) {
+            voicemail.appendAudio(b64);
+          }
           return;
         }
         case 'stop': {
@@ -88,6 +119,9 @@ export function registerTwilioMediaStream(app: FastifyInstance, settings: Settin
             session.close();
             dropSession(session.conversationId);
             stopVoiceIntent(session.conversationId);
+          }
+          if (voicemail) {
+            voicemail.close();
           }
           if (conversationId && core) {
             void core.endSession(conversationId).catch(() => undefined);
@@ -104,6 +138,9 @@ export function registerTwilioMediaStream(app: FastifyInstance, settings: Settin
         session.close();
         dropSession(session.conversationId);
         stopVoiceIntent(session.conversationId);
+      }
+      if (voicemail) {
+        voicemail.close();
       }
       if (conversationId && core) {
         void core.endSession(conversationId).catch(() => undefined);

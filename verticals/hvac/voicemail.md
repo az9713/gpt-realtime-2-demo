@@ -1,0 +1,1 @@
+You've reached the after-hours line for the HVAC company. Our office is closed right now. Please leave a message after the tone — your name, the address with the unit, and a phone number. The dispatcher will call you back first thing in the morning. If this is a safety emergency such as a gas leak or carbon monoxide alarm, please hang up and dial 911.

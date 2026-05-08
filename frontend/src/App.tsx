@@ -4,6 +4,7 @@ import { TalkPage } from './cockpit/TalkPage';
 import { ConversationListPage } from './conversations/ConversationListPage';
 import { TraceExplorerPage } from './conversations/TraceExplorerPage';
 import { ApprovalQueuePage } from './approvals/ApprovalQueuePage';
+import { VoicemailListPage } from './voicemails/VoicemailListPage';
 
 function NavTab({ to, label }: { to: string; label: string }): JSX.Element {
   return (
@@ -32,6 +33,7 @@ export default function App(): JSX.Element {
           <nav className="flex gap-1">
             <NavTab to="/" label="Talk" />
             <NavTab to="/approvals" label="Approvals" />
+            <NavTab to="/voicemails" label="Voicemails" />
             <NavTab to="/conversations" label="Conversations" />
           </nav>
           <div className="ml-auto flex items-center gap-3 text-sm text-slate-400">
@@ -48,6 +50,7 @@ export default function App(): JSX.Element {
           <Routes>
             <Route path="/" element={<TalkPage />} />
             <Route path="/approvals" element={<ApprovalQueuePage />} />
+            <Route path="/voicemails" element={<VoicemailListPage />} />
             <Route path="/conversations" element={<ConversationListPage />} />
             <Route path="/conversations/:id" element={<TraceExplorerPage />} />
           </Routes>

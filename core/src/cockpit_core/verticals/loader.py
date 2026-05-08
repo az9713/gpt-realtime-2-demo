@@ -40,6 +40,11 @@ class VerticalPack:
     post_call: Callable[[Any], Awaitable[None]] | None = None
     raw_pack_yaml: dict[str, Any] = field(default_factory=dict)
     raw_policy_yaml: dict[str, Any] = field(default_factory=dict)
+    # Phase 4 (voicemail): optional per-vertical config.
+    business_hours: dict[str, Any] | None = None
+    voicemail_greeting: str | None = None
+    # Phase 5 (audit transcripts): opt-in flag for audit-class verticals.
+    audit_transcripts: bool = False
 
     def approval_phrase(self, tool_name: str) -> str | None:
         entry = self.approvals_config.get(tool_name)
@@ -122,6 +127,18 @@ def load_vertical_from_path(pack_dir: Path) -> VerticalPack:
     surfaces = list(pack_yaml.get("surfaces", ["browser", "phone"]))
     languages = list(pack_yaml.get("languages", ["en"]))
     auto_translate = bool(pack_yaml.get("auto_translate_non_english", False))
+    business_hours_raw = pack_yaml.get("business_hours")
+    business_hours: dict[str, Any] | None = (
+        dict(business_hours_raw) if isinstance(business_hours_raw, dict) else None
+    )
+    audit_transcripts = bool(pack_yaml.get("audit_transcripts", False))
+
+    voicemail_greeting_path = pack_yaml.get("voicemail_greeting")
+    voicemail_greeting: str | None = None
+    if voicemail_greeting_path:
+        gp = pack_dir / str(voicemail_greeting_path)
+        if gp.exists():
+            voicemail_greeting = gp.read_text(encoding="utf-8").strip()
 
     prompt_path = pack_dir / "prompt.md"
     if not prompt_path.exists():
@@ -185,6 +202,9 @@ def load_vertical_from_path(pack_dir: Path) -> VerticalPack:
         post_call=post_call_fn,
         raw_pack_yaml=pack_yaml,
         raw_policy_yaml=policy,
+        business_hours=business_hours,
+        voicemail_greeting=voicemail_greeting,
+        audit_transcripts=audit_transcripts,
     )
 
 

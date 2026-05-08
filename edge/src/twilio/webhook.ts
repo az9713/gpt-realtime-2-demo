@@ -1,10 +1,49 @@
 import type { FastifyInstance } from 'fastify';
 import type { Settings } from '../settings.js';
+import { request as undiciRequest } from 'undici';
 import twilio from 'twilio';
-import { buildRejectTwiml, buildTwiml, verticalForNumber } from './routing.js';
+import {
+  buildRejectTwiml,
+  buildTwiml,
+  buildVoicemailTwiml,
+  verticalForNumber,
+} from './routing.js';
 import { registerTwilioMediaStream } from './media-stream.js';
 import { getCoreClient } from '../core-client/index.js';
 import { log } from '../logging.js';
+
+interface BusinessStatus {
+  vertical: string;
+  open: boolean;
+  voicemail_greeting: string | null;
+  supports_voicemail: boolean;
+}
+
+/**
+ * Asks the core's /v1/verticals/{name}/business-status endpoint whether
+ * the vertical is open right now and (if not) what greeting to play.
+ * Failures are treated as "open" — the agent serves the call as normal,
+ * never silently dropping inbound traffic.
+ */
+async function fetchBusinessStatus(
+  settings: Settings,
+  vertical: string,
+): Promise<BusinessStatus | null> {
+  try {
+    const res = await undiciRequest(
+      `${settings.coreHttpUrl}/v1/verticals/${encodeURIComponent(vertical)}/business-status`,
+      { method: 'GET' },
+    );
+    if (res.statusCode >= 400) {
+      await res.body.dump();
+      return null;
+    }
+    return (await res.body.json()) as BusinessStatus;
+  } catch (err) {
+    log.warn({ err, vertical }, 'business_status_fetch_failed');
+    return null;
+  }
+}
 
 interface TwilioVoiceForm {
   Called?: string;
@@ -49,6 +88,19 @@ export function registerTwilioRoutes(app: FastifyInstance, settings: Settings): 
     }
 
     reply.header('content-type', 'text/xml');
+
+    // If the vertical defines business hours and we're outside them,
+    // serve the voicemail TwiML instead of the agent TwiML.
+    if (vertical) {
+      const status = await fetchBusinessStatus(settings, vertical);
+      if (status && status.supports_voicemail && !status.open) {
+        const greeting =
+          status.voicemail_greeting ??
+          'You have reached the after-hours line. Please leave a message after the tone.';
+        return buildVoicemailTwiml(settings, vertical, greeting);
+      }
+    }
+
     return buildTwiml(settings, vertical);
   });
 }

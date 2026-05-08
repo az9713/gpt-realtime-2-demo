@@ -11,6 +11,7 @@ from cockpit_core.api.approvals import router as approvals_router
 from cockpit_core.api.conversations import router as conversations_router
 from cockpit_core.api.health import router as health_router
 from cockpit_core.api.sessions import router as sessions_router
+from cockpit_core.api.verticals import router as verticals_router
 from cockpit_core.db import close_pool, init_pool
 from cockpit_core.logging import configure_logging, get_logger
 from cockpit_core.observability.tracer import shutdown_tracer, start_tracer
@@ -46,6 +47,7 @@ def create_app() -> FastAPI:
     app.include_router(sessions_router)
     app.include_router(conversations_router)
     app.include_router(approvals_router)
+    app.include_router(verticals_router)
     return app
 
 
