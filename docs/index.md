@@ -14,6 +14,7 @@ out. If something feels too dense, jump back to [key concepts](overview/key-conc
 | If you want to… | Read this |
 |---|---|
 | Understand what this thing is and why it exists | [overview/what-is-this.md](overview/what-is-this.md) |
+| See realistic worked examples (UI clicks, terminal, Claude Code) | [use-cases.md](use-cases.md) |
 | Look up a term you saw in code or another doc | [overview/key-concepts.md](overview/key-concepts.md) |
 | See the whole architecture in one diagram | [architecture/system-design.md](architecture/system-design.md) |
 | Understand the GPT-Realtime model itself | [reference/gpt-realtime-2.md](reference/gpt-realtime-2.md) |
