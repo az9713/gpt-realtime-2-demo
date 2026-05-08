@@ -14,7 +14,9 @@
       "Bash(.venv/Scripts/python.exe -m pytest tests/test_notetaker_post_call.py -q)",
       "Bash(.venv/Scripts/python.exe -m pytest tests/test_business_hours.py -q)",
       "Bash(.venv/Scripts/python.exe -m pip install --quiet \"tzdata>=2024.2\")",
-      "Bash(.venv/Scripts/python.exe -m pytest tests/test_audit.py -q)"
+      "Bash(.venv/Scripts/python.exe -m pytest tests/test_audit.py -q)",
+      "Bash(.venv/Scripts/python.exe -m pytest tests/test_synthesize_eval.py -q)",
+      "Bash(.venv/Scripts/python.exe -m mypy --strict src)"
     ]
   }
 }
