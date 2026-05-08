@@ -61,6 +61,29 @@ there's no enum to extend.
 
 ---
 
+## Audit divergences (Phase 5)
+
+For verticals that opt in via `pack.yaml: audit_transcripts: true`,
+a separate observability table — `app.audit_divergences` — captures
+mismatches between the agent's user-side transcript and the canonical
+whisper transcript. This is **not** a trace event; trace events are
+the per-step decision log, divergences are a derived analytical view
+populated by a nightly batch job.
+
+| Divergence kind | When |
+|---|---|
+| `paraphrase` | Small WER, both texts present (informational; usually unflagged below the 0.15 threshold) |
+| `omission` | Agent's transcript has materially fewer tokens than canonical |
+| `addition` | Agent's transcript has materially more tokens than canonical |
+| `mismatch` | High WER (≥ 0.50) with similar token counts (likely hallucination) |
+
+`make audit` runs the diff over the previous 24 hours of audit-flagged
+conversations and persists divergences. The cockpit's `/audit` page
+renders them. See [concepts/audit-transcripts.md](audit-transcripts.md)
+for the full pipeline.
+
+---
+
 ## Why async-batched writes
 
 Naïve approach: every decision writes a row directly to Postgres.

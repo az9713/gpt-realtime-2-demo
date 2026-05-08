@@ -63,17 +63,26 @@ the durable record ourselves.
 ┌────────────────────────────────────────────────────────┐
 │  Postgres conversation store (durable, queryable)     │
 │  ─────────────────────────────────────────────         │
-│  • app.conversations  → one row per conversation       │
-│  • app.turns          → user + agent + tool utterances │
-│  • app.tool_calls     → every tool invocation          │
-│  • app.approvals      → every dangerous-tool gate      │
-│  • app.trace_events   → every decision event           │
+│  • app.conversations     → one row per conversation;  │
+│                              mode in {realtime2,       │
+│                              translate, voicemail,     │
+│                              notetaker}                 │
+│  • app.turns             → utterances; turns.model     │
+│                              tags whisper vs realtime  │
+│  • app.tool_calls        → every tool invocation       │
+│  • app.approvals         → every dangerous-tool gate   │
+│  • app.trace_events      → every decision event        │
+│  • app.audit_divergences → flagged transcript          │
+│                              divergences (Phase 5;     │
+│                              opt-in via vertical flag) │
 └────────────────────────────────────────────────────────┘
 ```
 
-The schema is laid out in [`SPEC §5`](../../SPEC.md). All five tables
-are keyed by a UUIDv7 conversation ID, which is sortable by creation
-time — a small but useful detail for cockpit list views.
+The schema started as five tables ([`SPEC §5`](../../SPEC.md)); the
+sixth (`audit_divergences`) was added by migration 0003 for the audit
+transcripts feature. All tables are keyed by a UUIDv7 conversation ID
+where applicable, which is sortable by creation time — a small but
+useful detail for cockpit list views.
 
 ---
 
@@ -150,10 +159,16 @@ Healthcare, finance, and regulated industries need to be able to
 answer "what did the agent say, what did it do, when, and on whose
 authority?" This codebase answers all four:
 
-- *what did it say* → `turns` (transcripts)
+- *what did it say* → `turns` (transcripts; `turns.model` tells you
+  whether it was the agent's interpretation or whisper's canonical
+  capture)
 - *what did it do* → `tool_calls` (args, result, status)
 - *when* → every row has a timestamp
 - *on whose authority* → `approvals.decided_by`, `approvals.decided_via`
+- *did the agent paraphrase, omit, or hallucinate* →
+  `app.audit_divergences` (when the vertical opts into
+  `audit_transcripts: true`; see
+  [concepts/audit-transcripts.md](audit-transcripts.md))
 
 ---
 
@@ -165,6 +180,7 @@ conversations (
   vertical        text,
   surface         text,            -- 'browser' | 'phone'
   mode            text,            -- 'realtime2' | 'translate'
+                                   --   | 'voicemail' | 'notetaker'
   language        text,            -- BCP-47, set after detect
   customer_ref    jsonb,
   agent_persona   text,
@@ -218,11 +234,24 @@ trace_events (
   payload_json    jsonb,
   cost_usd        numeric(10, 6)
 )
+
+audit_divergences (                  -- migration 0003 (Phase 5)
+  id                 uuid pk,
+  conversation_id    uuid fk,
+  agent_turn_id      uuid,           -- nullable when the agent missed an utterance
+  canonical_turn_id  uuid,           -- nullable when the agent imagined an utterance
+  kind               text,           -- 'paraphrase' | 'omission' | 'addition' | 'mismatch'
+  score              numeric(5, 4),  -- WER, normalized
+  agent_text         text,
+  canonical_text     text,
+  flagged_at         timestamptz default now()
+)
 ```
 
 Migrations live in `core/alembic/versions/`. The initial migration
-(`0001_initial`) creates all five tables with their constraints and
-indexes. Future schema changes happen via new alembic revisions —
+(`0001_initial`) creates the five core tables; `0002_widen_modes`
+relaxed the conversations.mode CHECK to allow voicemail and
+notetaker; `0003_audit_divergences` adds the audit table. All
 forward-only, no destructive `down`.
 
 ---

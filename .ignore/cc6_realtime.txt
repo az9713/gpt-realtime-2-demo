@@ -1,0 +1,29 @@
+                                                                                                                                                                                                                  ● All 6 phases shipped to https://github.com/az9713/gpt-realtime-2-demo.                                                                                                                                                                                                                                                                                                                                                              Summary
+                                                                                                                                                                                                                    ┌───────┬───────────────────────────────────────────────────────────────────────────────────────────────┬─────────┬─────────────────────────────┐                                                                 │ Phase │                                            Feature                                            │ Commit  │         Tests added         │                                                                 ├───────┼───────────────────────────────────────────────────────────────────────────────────────────────┼─────────┼─────────────────────────────┤                                                                 │ 1     │ Foundation: migration 0002, TranscriptionSession, whisper config, MockOpenAIWebSocket fixture │ f1bd7dc │ +6 Node                     │                                                                 ├───────┼───────────────────────────────────────────────────────────────────────────────────────────────┼─────────┼─────────────────────────────┤
+  │ 2     │ Bilingual transcript capture (translate sidecar)                                              │ 0b38af6 │ +2 Python, +6 Node, +1 eval │
+  ├───────┼───────────────────────────────────────────────────────────────────────────────────────────────┼─────────┼─────────────────────────────┤
+  │ 3     │ Note-taker mode (solo, no agent persona)                                                      │ a0650ff │ +2 Python, +1 eval          │
+  ├───────┼───────────────────────────────────────────────────────────────────────────────────────────────┼─────────┼─────────────────────────────┤
+  │ 4     │ Voicemail / overflow handler + business hours                                                 │ a0f9e5f │ +7 Python, +3 Node, +1 eval │
+  ├───────┼───────────────────────────────────────────────────────────────────────────────────────────────┼─────────┼─────────────────────────────┤
+  │ 5     │ Audit transcripts + divergence job + migration 0003                                           │ 9d062ef │ +9 Python                   │
+  ├───────┼───────────────────────────────────────────────────────────────────────────────────────────────┼─────────┼─────────────────────────────┤
+  │ 6     │ Eval generation from real calls (make synthesize-eval CONV=<uuid>)                            │ 53e2790 │ +5 Python                   │
+  └───────┴───────────────────────────────────────────────────────────────────────────────────────────────┴─────────┴─────────────────────────────┘
+
+  Final test counts: 61 Python tests + 27 Node tests, all passing. Ruff clean, edge tsc clean. Two database migrations applied successfully (mode CHECK widened, audit_divergences table created).
+
+  Non-regression discipline held throughout: every original test (32 Python, 12 Node) still passes; the platform's existing realtime2 + translate paths are untouched in their hot loop, only extended at clean
+  seams (lazy sidecar instantiation, mode literal widening with the existing literals first, optional audit_transcripts flag defaulting false).
+
+  All three GA Realtime models now in use:
+  - gpt-realtime-2 — conversational default
+  - gpt-realtime-translate — translate mode
+  - gpt-realtime-whisper — voicemail (solo), notetaker (solo), bilingual (sidecar), audit (sidecar always-on); also the conceptual ground truth for the eval-generation pipeline
+
+✻ Churned for 34m 55s
+
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────> update documents with                                                                                                                                                                                           ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────  | Opus 4.7 (1M context) | gpt-realtime-2_openai | main | ctx 68% | 5h 1% | 7d 24% |                                                                                                      Remote Control active
+  ⏵⏵ accept edits on (shift+tab to cycle)
+
+

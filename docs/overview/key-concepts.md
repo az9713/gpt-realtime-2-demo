@@ -25,17 +25,50 @@ Example: scheduling a service call requires an approval.
 tools execute freely but log audibly. Dangerous tools (e.g.
 `dispatch_truck`) require approval before execution.
 
-**Conversation** — One end-to-end interaction with a caller or operator.
-Has a UUID, a vertical, a surface (phone or browser), a mode
-(realtime2 or translate), and a stream of turns/tool calls/trace
-events. Persisted in `app.conversations`.
+**Agentless mode** — A session mode where the cockpit creates a
+conversation row and bridges audio, but does **not** attach a vertical
+agent runtime — no persona, no tools, no guardrails fire. The two
+agentless modes are `voicemail` and `notetaker`. Defined in code:
+`core/src/cockpit_core/api/sessions.py:_AGENTLESS_MODES`.
+
+**Audit transcripts** — A per-vertical opt-in (`pack.yaml:
+audit_transcripts: true`) that runs a `gpt-realtime-whisper` sidecar
+always-on alongside the agent. A nightly job diffs the agent's user
+transcripts against whisper's canonical record and writes flagged
+divergences to `app.audit_divergences`. See
+[concepts/audit-transcripts.md](../concepts/audit-transcripts.md).
+
+**Bilingual capture** — When a session enters translate mode, a
+whisper sidecar opens lazily and persists the source-language
+transcript alongside the translate model's target-language transcript.
+Both end up in `app.turns` with distinct `model` tags.
+
+**Business hours** — A per-vertical config block (`pack.yaml:
+business_hours: { tz, open, close, days }`) that controls when
+voicemail mode activates. Outside the window, inbound calls hit the
+voicemail TwiML instead of the agent. IANA timezones, ISO weekdays
+(1=Mon, 7=Sun), midnight-wrapping windows supported.
+
+**Conversation** — One end-to-end interaction with a caller or
+operator. Has a UUID, a vertical, a surface (phone or browser), a
+mode (`realtime2` | `translate` | `voicemail` | `notetaker`), and a
+stream of turns/tool calls/trace events. Persisted in
+`app.conversations`.
 
 **Core** — The Python agent core (FastAPI + asyncpg). Lives in
 `core/`. Owns tool execution, guardrails, persistence, observability.
 Does not touch raw audio.
 
-**Cockpit** — The browser UI for the human dispatcher. Live transcripts,
-approval queue, trace explorer. Lives in `frontend/`.
+**Cockpit** — The browser UI for the human dispatcher. Live
+transcripts, approval queue, trace explorer, voicemail list, audit
+divergences. Lives in `frontend/`.
+
+**Divergence** — A row in `app.audit_divergences` flagging a place
+where the agent's user-side transcript disagreed with the canonical
+whisper transcript on the same utterance. Has a `kind` in
+{`paraphrase`, `omission`, `addition`, `mismatch`} and a WER score.
+Created by the `make audit` runner. See
+[concepts/audit-transcripts.md](../concepts/audit-transcripts.md).
 
 **Edge** — The Node.js transport edge (Fastify + ws). Lives in `edge/`.
 Owns WebRTC signaling, Twilio Media Streams, and OpenAI Realtime
@@ -46,14 +79,36 @@ before user input is sent to the model, before a tool call executes,
 or before agent output is shown. Examples: PII redaction, language
 detection, safety classifiers.
 
+**Mode** — The session-level model selector. Four values:
+`realtime2` (default — agent + tools), `translate` (passthrough
+translation), `voicemail` (whisper-only after-hours capture),
+`notetaker` (whisper-only silent capture, dispatcher initiated).
+Mid-session switches are allowed only between `realtime2` and
+`translate`; the other two are start-time only.
+
+**Note-taker mode** — Agentless session: dispatcher takes a call
+directly, whisper transcribes silently. New "Notes only" button in
+the cockpit's Talk page. See
+[concepts/note-taker.md](../concepts/note-taker.md).
+
 **Persona** — The agent's name and voice. The HVAC vertical's
 persona is *Aria*. Persona is part of the vertical pack, not the
-platform.
+platform. Agentless modes (voicemail, notetaker) have no persona.
 
 **Preamble** — A short phrase the agent says before invoking a tool,
 e.g. "Let me pull up that part." Configured per tool in
 `preambles.yaml`. Improves perceived latency by giving the caller
 something to listen to while the tool runs.
+
+**Sidecar** (whisper sidecar) — A `TranscriptionSession` instance
+opened *alongside* a `RealtimeSession` to capture canonical whisper
+transcripts. Used by translate mode (lazy open) and audit-flagged
+verticals (parallel open at session start). Audio frames fan out to
+both WebSockets.
+
+**Solo (whisper)** — A `TranscriptionSession` opened *instead of* a
+`RealtimeSession`. Used by voicemail and note-taker modes. No agent,
+no audio output.
 
 **Surface** — A physical channel a human reaches the agent through.
 v1 supports `browser` (WebRTC mic/speaker) and `phone` (Twilio
@@ -67,6 +122,12 @@ Example: `parts_lookup(model_number, part_description) -> PartInfo`.
 status (`requested`, `approved`, `denied`, `executed`, `failed`), and
 an optional `approval_id`. Persisted in `app.tool_calls`.
 
+**TranscriptionSession** — The shared edge class that wraps a
+`gpt-realtime-whisper` WebSocket. Used in two shapes — solo and
+sidecar — across five features: voicemail, note-taker, bilingual
+capture, audit transcripts, and (offline) eval synthesis. Lives in
+`edge/src/openai/transcription.ts`.
+
 **Trace event** — A timestamped record of something that happened in a
 conversation: turn boundaries, tool dispatches, guardrail decisions,
 approval lifecycle. Async-batched into `app.trace_events`. The cockpit
@@ -79,8 +140,18 @@ same role into one turn is a deliberate simplification.
 **Vertical** / **Vertical pack** — A directory at `verticals/<name>/`
 that configures the agent for a specific business. Contains
 `pack.yaml`, `prompt.md`, `tools.py`, `policy.yaml`, `approvals.yaml`,
-`preambles.yaml`, `post_call.py`. Adding a vertical does not require
-modifying the platform.
+`preambles.yaml`, `post_call.py`, optionally `voicemail.md`. Adding a
+vertical does not require modifying the platform.
+
+**Voicemail mode** — Agentless session triggered by Twilio webhook
+when a call lands outside the vertical's `business_hours`. A recorded
+greeting plays, then whisper captures the caller's message. See
+[concepts/voicemail.md](../concepts/voicemail.md).
+
+**WER (Word Error Rate)** — Token-level edit distance normalized by
+the longer of the two strings. Used by the audit divergence diff to
+score how much the agent's transcript disagrees with whisper's. Same
+metric ASR research uses for accuracy.
 
 ---
 
@@ -100,6 +171,12 @@ single WebSocket. Replaces `gpt-4o-realtime-preview`.
 optimized as a passthrough translator. The cockpit's "Translate mode"
 swaps the active model from realtime-2 to realtime-translate
 mid-session.
+
+**gpt-realtime-whisper** — The third GA Realtime model: streaming
+transcription only, no reasoning, no audio output. Used in this
+codebase for voicemail mode, note-taker mode, the bilingual sidecar
+in translate, and the always-on audit sidecar. See
+[reference/model-feature-map.md](../reference/model-feature-map.md).
 
 **Modalities** / **output_modalities** — Which output channels the
 model uses. v1 of this app sets `["audio"]`, meaning the model speaks

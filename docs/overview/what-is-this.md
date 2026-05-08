@@ -2,7 +2,11 @@
 
 A **single voice agent** that picks up your business phone, also lives in
 your browser as a "press-to-talk" cockpit, and runs the same tools no
-matter which surface the conversation arrives on.
+matter which surface the conversation arrives on. Built on top of all
+three GA Realtime models (`gpt-realtime-2`, `gpt-realtime-translate`,
+`gpt-realtime-whisper`), supporting four operating modes per session:
+agent-driven (`realtime2`), translate, voicemail (after-hours
+overflow), and note-taker (silent transcription).
 
 That one sentence hides a lot. The rest of this page unpacks it.
 
@@ -63,7 +67,10 @@ Think of the system as **three layers stacked on top of one another**.
 │  • Bridges audio in/out of OpenAI's Realtime API      │
 │  • Speaks Twilio's μ-law on one side, OpenAI's        │
 │    PCM-24kHz on the other, translates between them    │
-│  • Holds one Realtime WebSocket per active call       │
+│  • Holds one or two Realtime WebSockets per call:     │
+│    - RealtimeSession (gpt-realtime-2 / -translate)    │
+│    - TranscriptionSession (gpt-realtime-whisper) for  │
+│      voicemail, note-taker, bilingual, and audit      │
 └──────────────────────┬────────────────────────────────┘
                        │ HTTP for tool calls
                        │ WebSocket for events

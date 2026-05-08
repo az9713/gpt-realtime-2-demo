@@ -146,7 +146,9 @@ gpt-realtime-2_openai/
 │   │   │   ├── health.py
 │   │   │   ├── sessions.py
 │   │   │   ├── conversations.py
-│   │   │   └── approvals.py
+│   │   │   ├── approvals.py
+│   │   │   ├── verticals.py         ← business-status (Phase 4)
+│   │   │   └── audits.py            ← divergence reads (Phase 5)
 │   │   ├── agent/
 │   │   │   ├── contract.py         ← Tool, Agent, ToolCallRequest, ...
 │   │   │   ├── registry.py
@@ -162,16 +164,20 @@ gpt-realtime-2_openai/
 │   │   │   ├── turns.py
 │   │   │   ├── tool_calls.py
 │   │   │   ├── approvals.py
-│   │   │   └── trace_events.py
+│   │   │   ├── trace_events.py
+│   │   │   └── audit_divergences.py ← Phase 5
 │   │   ├── observability/
 │   │   │   ├── tracer.py
 │   │   │   ├── sinks.py
-│   │   │   └── notifier.py
+│   │   │   ├── notifier.py
+│   │   │   └── audit.py             ← divergence diff (Phase 5)
 │   │   ├── verticals/
-│   │   │   └── loader.py
+│   │   │   ├── loader.py
+│   │   │   └── business_hours.py    ← Phase 4 predicate
 │   │   ├── eval/
 │   │   │   ├── runner.py
-│   │   │   └── cli.py
+│   │   │   ├── cli.py
+│   │   │   └── synthesize.py        ← Phase 6
 │   │   ├── settings.py
 │   │   ├── logging.py
 │   │   ├── db.py
@@ -198,12 +204,13 @@ gpt-realtime-2_openai/
 │   │   │   └── audio.ts            ← μ-law codec, resampler
 │   │   ├── openai/
 │   │   │   ├── session.ts          ← per-conversation Realtime WS
+│   │   │   ├── transcription.ts    ← whisper WS (Phases 1–5)
 │   │   │   ├── events.ts
 │   │   │   └── sessions-registry.ts
 │   │   └── voice-intent/
 │   │       ├── classifier.ts       ← approval phrase matcher
 │   │       └── lang-id.ts          ← language detection
-│   └── tests/
+│   └── tests/                       ← incl. transcription, sidecar, voicemail-routing
 │
 ├── frontend/                       ← React cockpit
 │   ├── package.json
@@ -221,6 +228,10 @@ gpt-realtime-2_openai/
 │       │   └── ModeToggle.tsx
 │       ├── approvals/
 │       │   └── ApprovalQueuePage.tsx
+│       ├── voicemails/
+│       │   └── VoicemailListPage.tsx       ← Phase 4
+│       ├── audit/
+│       │   └── AuditListPage.tsx           ← Phase 5
 │       ├── conversations/
 │       │   ├── ConversationListPage.tsx
 │       │   └── TraceExplorerPage.tsx
@@ -228,13 +239,14 @@ gpt-realtime-2_openai/
 │
 ├── verticals/
 │   └── hvac/                       ← v1 vertical pack
-│       ├── pack.yaml
+│       ├── pack.yaml                ← incl. business_hours, audit_transcripts (Phase 4/5)
 │       ├── prompt.md
 │       ├── tools.py
 │       ├── policy.yaml
 │       ├── approvals.yaml
 │       ├── preambles.yaml
-│       ├── post_call.py
+│       ├── voicemail.md             ← greeting (Phase 4)
+│       ├── post_call.py             ← per-mode summary shapes
 │       ├── sandbox.py
 │       ├── fixtures/
 │       │   ├── parts.json
@@ -247,7 +259,10 @@ gpt-realtime-2_openai/
 │           ├── 02_schedule_move_approved.yaml
 │           ├── 03_schedule_move_denied.yaml
 │           ├── 04_spanish_translate_flip.yaml
-│           └── 05_multi_tool_parallel.yaml
+│           ├── 05_multi_tool_parallel.yaml
+│           ├── 06_translate_bilingual.yaml      ← Phase 2
+│           ├── 07_notetaker_session.yaml        ← Phase 3
+│           └── 08_voicemail_after_hours.yaml    ← Phase 4
 │
 ├── infra/
 │   └── postgres/init.sql
@@ -257,7 +272,9 @@ gpt-realtime-2_openai/
 │   ├── seed-hvac.sh
 │   ├── tunnel.sh
 │   ├── replay-conversation.py
-│   └── trace-dump.py
+│   ├── trace-dump.py
+│   ├── audit-divergences.py        ← Phase 5 nightly runner
+│   └── synthesize-eval.py          ← Phase 6 eval generator
 │
 ├── e2e/
 │   └── run.sh
@@ -499,13 +516,15 @@ Internal routes on port 8000:
 | `/v1/sessions/{id}/transcript` | POST | Push transcript chunks |
 | `/v1/sessions/{id}/approval-by-voice` | POST | Resolve approval by spoken phrase |
 | `/v1/sessions/{id}/events` | WS | Per-session push channel |
-| `/v1/conversations` | GET | List conversations |
+| `/v1/conversations` | GET | List conversations (filterable by `?mode=...`) |
 | `/v1/conversations/{id}` | GET | Conversation detail |
-| `/v1/conversations/{id}/turns` | GET | Turn list |
+| `/v1/conversations/{id}/turns` | GET | Turn list (includes `model` per turn) |
 | `/v1/conversations/{id}/tool-calls` | GET | Tool call list |
 | `/v1/conversations/{id}/trace` | GET | Trace event list |
 | `/v1/approvals` | GET | List pending approvals |
 | `/v1/approvals/{id}/resolve` | POST | Resolve approval (cockpit click) |
+| `/v1/verticals/{name}/business-status` | GET | Whether the vertical is open + voicemail greeting (Phase 4) |
+| `/v1/audits/divergences` | GET | Audit divergence rows (Phase 5) |
 
 ---
 

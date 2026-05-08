@@ -43,6 +43,7 @@ why we chose it over alternatives.
 │  structlog        │ Structured JSON logging              │
 │  websockets       │ WebSocket library                    │
 │  pyyaml           │ Vertical pack file parsing           │
+│  tzdata (Windows) │ IANA tz names for business_hours     │
 │  pytest           │ Test runner                          │
 │  ruff             │ Linter                               │
 │  mypy             │ Type checker (strict)                │
@@ -137,9 +138,10 @@ decision, and ships a tiny bundle (purged of unused classes).
 **What it is.** Client-side routing for React apps. Maps URL
 patterns to components.
 
-**Why.** The cockpit has three top-level routes (Talk, Approvals,
-Conversations) plus a parametric `/conversations/:id`. React Router
-handles browser-history state and lazy-loading.
+**Why.** The cockpit has five top-level routes (Talk, Approvals,
+Voicemails, Audit, Conversations) plus a parametric
+`/conversations/:id`. React Router handles browser-history state and
+lazy-loading.
 
 ---
 
@@ -344,6 +346,19 @@ query in production. We configure it with stdout + JSON renderer.
 **Why.** Vertical packs use YAML for non-code files
 (`pack.yaml`, `policy.yaml`, `approvals.yaml`, `preambles.yaml`).
 Eval scenarios use YAML.
+
+### tzdata (Windows-only)
+
+**What it is.** A Python package shipping the IANA timezone database
+as data files for `zoneinfo` to read.
+
+**Why.** Phase 4 (voicemail / business hours) uses
+`zoneinfo.ZoneInfo("America/Chicago")` etc. On Linux containers the
+system zoneinfo files are present; on Windows hosts they're not, and
+`zoneinfo` errors with `ZoneInfoNotFoundError`. The pyproject marks
+`tzdata` as a Windows-only dependency
+(`tzdata>=2024.2; sys_platform == 'win32'`) so dev runs on Windows
+hosts and CI on Linux both succeed.
 
 ### pytest, ruff, mypy, black
 

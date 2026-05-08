@@ -8,7 +8,8 @@
 
 ## What translate mode is
 
-OpenAI ships two real-time models for conversational use:
+OpenAI ships three GA real-time models. Two are used in conversational
+flow:
 
 - **`gpt-realtime-2`** — the conversational default. Reasons,
   speaks, calls tools.
@@ -16,10 +17,14 @@ OpenAI ships two real-time models for conversational use:
   passthrough translation. Listens in language A, speaks in language B.
   Doesn't reason, doesn't call tools.
 
-Both speak the same WebSocket protocol. Switching from one to the
-other is a small but careful operation: tear down the old session,
-open a new one against the new model, keep the conversation ID stable
-so traces and history flow on the same timeline.
+The third model (`gpt-realtime-whisper`) participates as a *sidecar*
+during translate sessions to capture the source-language transcript;
+see [Bilingual capture](#bilingual-capture) below.
+
+Switching from realtime-2 to translate is a small but careful
+operation: tear down the old session, open a new one against the new
+model, keep the conversation ID stable so traces and history flow on
+the same timeline.
 
 This codebase exposes that swap as **mode switching**, both manual
 (operator click in the cockpit) and automatic (when the inbound
@@ -186,6 +191,50 @@ reinforcement.)
 When the session flips back to realtime2, the original Aria prompt is
 resent in `session.update`. The agent resumes its dispatcher persona
 and tools.
+
+---
+
+## Bilingual capture
+
+When a session enters translate mode, a `gpt-realtime-whisper` sidecar
+opens **lazily** on the first audio frame. Both transcripts persist
+in `app.turns` — the translate model's target-language and whisper's
+source-language — distinguished by `turns.model`.
+
+```
+inbound audio frames
+        │
+        ├──► RealtimeSession (gpt-realtime-translate)
+        │            │
+        │            ▼
+        │     POST /transcript (model='gpt-realtime-translate', target language)
+        │
+        └──► TranscriptionSession (gpt-realtime-whisper)
+                     │
+                     ▼
+              POST /transcript (model='whisper', source language)
+```
+
+Why lazy: opening a second OpenAI WebSocket adds ~200 ms of handshake.
+For translate mode, that's hidden behind the user's first utterance —
+the user has just spoken, the agent is already responding; the
+sidecar catches up while the conversation continues. (For the audit
+feature, the sidecar opens *in parallel* at session start instead;
+completeness matters more than first-response latency. See
+[concepts/audit-transcripts.md](audit-transcripts.md).)
+
+The cockpit's trace explorer renders paired turns side-by-side so the
+dispatcher can read both versions:
+
+```
+USER · es        Hola, necesito agendar
+USER · whisper   Hola, necesito agendar un servicio
+                 ↑ canonical (whisper) caught the second clause
+                   the translate model dropped
+```
+
+This is also the data the audit divergence diff runs against when
+audit is enabled on top of translate.
 
 ---
 
