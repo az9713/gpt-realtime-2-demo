@@ -33,7 +33,7 @@ logger = get_logger("api.sessions")
 class CreateSessionBody(BaseModel):
     vertical: str | None = None
     surface: Literal["browser", "phone"]
-    mode: Literal["realtime2", "translate"] = "realtime2"
+    mode: Literal["realtime2", "translate", "voicemail", "notetaker"] = "realtime2"
     language: str | None = None
     customer_ref: dict[str, Any] | None = None
 
@@ -69,8 +69,21 @@ class ModeSwitchBody(BaseModel):
     mode: Literal["realtime2", "translate"]
 
 
+_AGENTLESS_MODES: frozenset[str] = frozenset({"voicemail", "notetaker"})
+
+
 @router.post("", response_model=CreateSessionResponse)
 async def create_session(body: CreateSessionBody) -> CreateSessionResponse:
+    """Create a session. Two flavors:
+
+    * **Agent modes** (``realtime2``, ``translate``) load the vertical pack's
+      tool registry, attach a per-session ``AgentRuntime``, and return the
+      full prompt + tools so the edge can configure the OpenAI Realtime WS.
+    * **Agentless modes** (``voicemail``, ``notetaker``) skip the runtime —
+      no tool dispatch, no agent persona. The conversation row is created
+      so transcripts and traces still flow, but the edge opens a
+      whisper-only ``TranscriptionSession`` rather than a ``RealtimeSession``.
+    """
     settings = get_settings()
     vertical_name = body.vertical or settings.default_vertical
     pack = load_vertical(vertical_name)
@@ -84,24 +97,29 @@ async def create_session(body: CreateSessionBody) -> CreateSessionResponse:
             400,
             f"vertical {pack.name!r} does not support mode {body.mode!r}",
         )
+
+    is_agentless = body.mode in _AGENTLESS_MODES
+    persona = "" if is_agentless else pack.persona
     _, ctx = await begin_session(
         vertical=vertical_name,
         surface=body.surface,
         mode=body.mode,
-        persona=pack.persona,
+        persona=persona or None,
         language=body.language,
         customer_ref=body.customer_ref,
     )
-    runtime = make_runtime(pack, ctx)
-    attach_runtime(runtime)
+    if not is_agentless:
+        runtime = make_runtime(pack, ctx)
+        attach_runtime(runtime)
+
     return CreateSessionResponse(
         conversation_id=ctx.conversation_id,
         vertical=vertical_name,
         surface=body.surface,
         mode=body.mode,
-        persona=pack.persona,
-        prompt=pack.prompt,
-        tools=pack.registry.schemas(),
+        persona=persona,
+        prompt="" if is_agentless else pack.prompt,
+        tools=[] if is_agentless else pack.registry.schemas(),
         voice=settings.openai_voice,
         realtime_model=settings.openai_realtime_model,
         translate_model=settings.openai_translate_model,

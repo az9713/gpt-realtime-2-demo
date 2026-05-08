@@ -16,7 +16,7 @@ class SessionContext:
     conversation_id: str
     vertical: str
     surface: Literal["browser", "phone"]
-    mode: Literal["realtime2", "translate"]
+    mode: Literal["realtime2", "translate", "voicemail", "notetaker"]
     persona: str | None = None
     language: str | None = None
     customer_ref: dict[str, Any] | None = None

@@ -10,7 +10,8 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
-      "Bash(.venv/Scripts/python.exe -m pytest tests/test_turn_model_tagging.py tests/eval -q)"
+      "Bash(.venv/Scripts/python.exe -m pytest tests/test_turn_model_tagging.py tests/eval -q)",
+      "Bash(.venv/Scripts/python.exe -m pytest tests/test_notetaker_post_call.py -q)"
     ]
   }
 }

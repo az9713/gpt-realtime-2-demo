@@ -31,7 +31,7 @@ export class CoreClient {
   async createSession(body: {
     surface: 'browser' | 'phone';
     vertical?: string;
-    mode?: 'realtime2' | 'translate';
+    mode?: 'realtime2' | 'translate' | 'voicemail' | 'notetaker';
     language?: string;
   }): Promise<SessionConfig> {
     const res = await request(`${this.settings.coreHttpUrl}/v1/sessions`, {

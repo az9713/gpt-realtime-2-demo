@@ -3,10 +3,12 @@ import { ModeBadge } from './ModeBadge';
 import { ModeToggle } from './ModeToggle';
 import { TranscriptView, type TranscriptLine } from './TranscriptView';
 
+type SessionMode = 'realtime2' | 'translate' | 'notetaker';
+
 interface SessionInfo {
   conversationId: string;
   vertical: string;
-  mode: 'realtime2' | 'translate';
+  mode: SessionMode;
 }
 
 const FRAME_MS = 250;
@@ -34,11 +36,12 @@ export function TalkPage(): JSX.Element {
     });
   };
 
-  const start = async (): Promise<void> => {
+  const start = async (sessionMode: SessionMode = 'realtime2'): Promise<void> => {
     setLines([]);
     const edgeBase = ((import.meta.env.VITE_EDGE_URL as string | undefined) ??
       'http://localhost:8080').replace(/^http/, 'ws');
-    const wsUrl = `${edgeBase}/v1/voice/browser?vertical=${encodeURIComponent('hvac')}`;
+    const params = new URLSearchParams({ vertical: 'hvac', mode: sessionMode });
+    const wsUrl = `${edgeBase}/v1/voice/browser?${params.toString()}`;
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 
@@ -158,7 +161,7 @@ export function TalkPage(): JSX.Element {
         <div className="flex items-center gap-3 mb-4">
           <button
             type="button"
-            onClick={recording ? stop : start}
+            onClick={recording ? stop : () => void start('realtime2')}
             className={`px-4 py-2 rounded-md font-medium ${
               recording
                 ? 'bg-rose-600 hover:bg-rose-500'
@@ -167,8 +170,20 @@ export function TalkPage(): JSX.Element {
           >
             {recording ? 'Stop' : 'Talk'}
           </button>
+          {!recording && (
+            <button
+              type="button"
+              onClick={() => void start('notetaker')}
+              className="px-4 py-2 rounded-md font-medium border border-slate-600 text-slate-200 hover:bg-slate-800"
+              title="Silent transcription only — no agent persona, no tools"
+            >
+              Notes only
+            </button>
+          )}
           {session && <ModeBadge mode={session.mode} />}
-          {session && <ModeToggle mode={session.mode} onToggle={toggleMode} />}
+          {session && session.mode !== 'notetaker' && (
+            <ModeToggle mode={session.mode} onToggle={toggleMode} />
+          )}
           {session && (
             <span className="text-xs text-slate-500 font-mono">
               {session.conversationId.slice(0, 8)} · {session.vertical}

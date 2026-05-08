@@ -4,6 +4,7 @@ persona: Aria
 modes:
   - realtime2
   - translate
+  - notetaker
 surfaces:
   - browser
   - phone
