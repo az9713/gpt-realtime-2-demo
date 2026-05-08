@@ -16,6 +16,7 @@ export interface SessionConfig {
   realtime_model: string;
   translate_model: string;
   auto_translate_non_english: boolean;
+  audit_transcripts?: boolean;
 }
 
 export interface ToolCallResponse {

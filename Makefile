@@ -64,6 +64,12 @@ seed-hvac:
 tunnel:
 	bash scripts/tunnel.sh
 
+audit:
+	cd core && uv run python ../scripts/audit-divergences.py $(ARGS)
+
+synthesize-eval:
+	cd core && uv run python ../scripts/synthesize-eval.py $(CONV)
+
 test: test-core test-edge test-eval
 
 test-core:

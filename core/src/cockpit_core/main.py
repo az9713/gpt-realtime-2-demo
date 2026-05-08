@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from cockpit_core.api.approvals import router as approvals_router
+from cockpit_core.api.audits import router as audits_router
 from cockpit_core.api.conversations import router as conversations_router
 from cockpit_core.api.health import router as health_router
 from cockpit_core.api.sessions import router as sessions_router
@@ -48,6 +49,7 @@ def create_app() -> FastAPI:
     app.include_router(conversations_router)
     app.include_router(approvals_router)
     app.include_router(verticals_router)
+    app.include_router(audits_router)
     return app
 
 

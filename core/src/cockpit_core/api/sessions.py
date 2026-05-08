@@ -50,6 +50,7 @@ class CreateSessionResponse(BaseModel):
     realtime_model: str
     translate_model: str
     auto_translate_non_english: bool
+    audit_transcripts: bool = False
 
 
 class ToolCallBody(BaseModel):
@@ -124,6 +125,7 @@ async def create_session(body: CreateSessionBody) -> CreateSessionResponse:
         realtime_model=settings.openai_realtime_model,
         translate_model=settings.openai_translate_model,
         auto_translate_non_english=pack.auto_translate_non_english,
+        audit_transcripts=pack.audit_transcripts,
     )
 
 

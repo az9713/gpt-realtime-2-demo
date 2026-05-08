@@ -51,9 +51,13 @@ export function registerTwilioMediaStream(app: FastifyInstance, settings: Settin
         ...(vertical !== undefined ? { vertical } : {}),
       });
       conversationId = config.conversation_id;
-      session = new RealtimeSession(settings, core, config, {
-        onAudioDelta: onAgentAudioDelta,
-      });
+      session = new RealtimeSession(
+        settings,
+        core,
+        config,
+        { onAudioDelta: onAgentAudioDelta },
+        { auditTranscripts: config.audit_transcripts === true },
+      );
       registerSession(session);
       await session.open();
       startVoiceIntent(config.conversation_id, settings, core);

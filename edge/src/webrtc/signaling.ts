@@ -64,13 +64,19 @@ export function registerWebRtcSignaling(app: FastifyInstance, settings: Settings
         ...(language !== undefined ? { language } : {}),
       });
       conversationId = config.conversation_id;
-      session = new RealtimeSession(settings, core, config, {
-        onAudioDelta: (b64) => send({ kind: 'audio.delta', audio: b64 }),
-        onTranscriptDelta: (delta) => send({ kind: 'transcript.delta', text: delta }),
-        onUserTranscript: (text) => send({ kind: 'transcript.user', text }),
-        onResponseDone: (id) => send({ kind: 'response.done', response_id: id }),
-        onClosed: () => send({ kind: 'session.closed' }),
-      });
+      session = new RealtimeSession(
+        settings,
+        core,
+        config,
+        {
+          onAudioDelta: (b64) => send({ kind: 'audio.delta', audio: b64 }),
+          onTranscriptDelta: (delta) => send({ kind: 'transcript.delta', text: delta }),
+          onUserTranscript: (text) => send({ kind: 'transcript.user', text }),
+          onResponseDone: (id) => send({ kind: 'response.done', response_id: id }),
+          onClosed: () => send({ kind: 'session.closed' }),
+        },
+        { auditTranscripts: config.audit_transcripts === true },
+      );
       registerSession(session);
       await session.open();
       send({
@@ -78,6 +84,7 @@ export function registerWebRtcSignaling(app: FastifyInstance, settings: Settings
         conversation_id: config.conversation_id,
         vertical: config.vertical,
         mode: config.mode,
+        audit_transcripts: config.audit_transcripts === true,
       });
       startVoiceIntent(config.conversation_id, settings, core);
     };
