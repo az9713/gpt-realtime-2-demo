@@ -8,6 +8,7 @@ import {
   responseCreate,
   type RealtimeServerEvent,
 } from './events.js';
+import { TranscriptionSession } from './transcription.js';
 
 export interface SessionHandlers {
   onAudioDelta?: (base64Audio: string) => void;
@@ -17,24 +18,58 @@ export interface SessionHandlers {
   onClosed?: () => void;
 }
 
+/**
+ * Test-only seam for swapping the WebSocket constructor and the
+ * transcription-sidecar factory. Production code never sets these.
+ */
+export type SessionWSFactory = (
+  url: string,
+  options?: WebSocket.ClientOptions,
+) => WebSocket;
+export interface RealtimeSessionOptions {
+  /** When true, run a `gpt-realtime-whisper` sidecar always-on, regardless of mode. */
+  auditTranscripts?: boolean;
+  wsFactory?: SessionWSFactory;
+  transcriptionFactory?: (conversationId: string) => TranscriptionSession;
+}
+
+const defaultWsFactory: SessionWSFactory = (url, options) => new WebSocket(url, options);
+
 export class RealtimeSession {
   private ws: WebSocket | null = null;
   private model: string;
   private closed = false;
   private startTs = Date.now();
+  /** When set, every inbound audio frame fans out to this whisper-only WS. */
+  private sidecar: TranscriptionSession | null = null;
+  private readonly auditTranscripts: boolean;
+  private readonly wsFactory: SessionWSFactory;
+  private readonly transcriptionFactory: (conversationId: string) => TranscriptionSession;
 
   constructor(
     private readonly settings: Settings,
     private readonly core: CoreClient,
     private readonly config: SessionConfig,
     private readonly handlers: SessionHandlers = {},
+    opts: RealtimeSessionOptions = {},
   ) {
     this.model =
       config.mode === 'translate' ? settings.openaiTranslateModel : settings.openaiRealtimeModel;
+    this.auditTranscripts = opts.auditTranscripts ?? false;
+    this.wsFactory = opts.wsFactory ?? defaultWsFactory;
+    this.transcriptionFactory =
+      opts.transcriptionFactory ??
+      ((conversationId) =>
+        new TranscriptionSession(this.settings, this.core, { conversationId }));
   }
 
   get conversationId(): string {
     return this.config.conversation_id;
+  }
+
+  /** True when the session is currently in a configuration that warrants a whisper sidecar. */
+  private shouldHaveSidecar(): boolean {
+    return this.auditTranscripts || this.model === this.settings.openaiTranslateModel;
   }
 
   async open(): Promise<void> {
@@ -43,12 +78,11 @@ export class RealtimeSession {
       return;
     }
     const url = `wss://api.openai.com/v1/realtime?model=${encodeURIComponent(this.model)}`;
-    const ws = new WebSocket(url, {
-      headers: {
-        Authorization: `Bearer ${this.settings.openaiApiKey}`,
-      },
+    const ws = this.wsFactory(url, {
+      headers: { Authorization: `Bearer ${this.settings.openaiApiKey}` },
     });
     this.ws = ws;
+    this.closed = false;
 
     ws.on('open', () => {
       log.info(
@@ -102,16 +136,32 @@ export class RealtimeSession {
     ws.on('error', (err) => {
       log.error({ err, conv: this.config.conversation_id }, 'openai_realtime_error');
     });
+
+    // For audit-flagged verticals, open the sidecar in parallel with the
+    // primary session so total startup latency is max(open, sidecar) rather
+    // than sum. For translate mode, the sidecar is opened lazily on first
+    // audio (see appendAudio).
+    if (this.auditTranscripts) {
+      this.ensureSidecar();
+    }
   }
 
+  /**
+   * Switches the active OpenAI model. Tears down the primary WS and reopens.
+   * Sidecar lifecycle is reconciled afterwards based on `shouldHaveSidecar()`.
+   */
   async switchModel(mode: 'realtime2' | 'translate'): Promise<void> {
     const newModel =
       mode === 'translate' ? this.settings.openaiTranslateModel : this.settings.openaiRealtimeModel;
     if (newModel === this.model) return;
     log.info({ conv: this.config.conversation_id, mode }, 'openai_mode_switch');
-    this.close();
+    this.closePrimary();
     this.model = newModel;
     await this.open();
+    // If we left translate mode without auditing, tear down the sidecar.
+    if (!this.shouldHaveSidecar()) {
+      this.closeSidecar();
+    }
   }
 
   send(event: object): void {
@@ -119,8 +169,18 @@ export class RealtimeSession {
     this.ws.send(JSON.stringify(event));
   }
 
+  /**
+   * Forwards an audio frame to the OpenAI Realtime WS, and (when applicable)
+   * to the whisper sidecar for parallel transcription. The sidecar opens
+   * lazily on the first audio frame after entering translate mode — this
+   * amortizes its setup latency behind the user's first utterance.
+   */
   appendAudio(base64Audio: string): void {
     this.send(inputAudioAppend(base64Audio));
+    if (this.shouldHaveSidecar()) {
+      this.ensureSidecar();
+      this.sidecar?.appendAudio(base64Audio);
+    }
   }
 
   commitInput(): void {
@@ -129,11 +189,51 @@ export class RealtimeSession {
   }
 
   close(): void {
+    this.closePrimary();
+    this.closeSidecar();
+  }
+
+  private closePrimary(): void {
     if (this.ws && !this.closed) {
-      this.ws.close();
-      this.ws = null;
-      this.closed = true;
+      try {
+        this.ws.close();
+      } catch (err) {
+        log.warn({ err, conv: this.config.conversation_id }, 'realtime_close_threw');
+      }
     }
+    this.ws = null;
+    this.closed = true;
+  }
+
+  private ensureSidecar(): void {
+    if (this.sidecar) return;
+    try {
+      const sc = this.transcriptionFactory(this.config.conversation_id);
+      void sc.open().catch((err) =>
+        log.warn({ err, conv: this.config.conversation_id }, 'sidecar_open_failed'),
+      );
+      this.sidecar = sc;
+    } catch (err) {
+      // Sidecar failure must NOT take down the primary session.
+      log.warn({ err, conv: this.config.conversation_id }, 'sidecar_construct_failed');
+      this.sidecar = null;
+    }
+  }
+
+  private closeSidecar(): void {
+    if (this.sidecar) {
+      try {
+        this.sidecar.close();
+      } catch (err) {
+        log.warn({ err, conv: this.config.conversation_id }, 'sidecar_close_threw');
+      }
+      this.sidecar = null;
+    }
+  }
+
+  /** Test seam: returns whether the sidecar is currently constructed. */
+  hasSidecar(): boolean {
+    return this.sidecar !== null;
   }
 
   private async handleEvent(event: RealtimeServerEvent): Promise<void> {
@@ -155,14 +255,29 @@ export class RealtimeSession {
       case 'conversation.item.input_audio_transcription.completed': {
         const transcript = (event as { transcript?: string }).transcript ?? '';
         this.handlers.onUserTranscript?.(transcript);
-        await this.core.pushTranscript(this.conversationId, 'user', transcript);
+        // Tag the transcript with the active model so audit/bilingual
+        // diff jobs can distinguish agent-side recognition from
+        // whisper-side recognition (which is persisted by the sidecar).
+        await this.core.pushTranscript(
+          this.conversationId,
+          'user',
+          transcript,
+          undefined,
+          this.model,
+        );
         return;
       }
       case 'response.output_audio_transcript.done':
       case 'response.audio_transcript.done': {
         const transcript = (event as { transcript?: string }).transcript ?? '';
         const latency = Date.now() - this.startTs;
-        await this.core.pushTranscript(this.conversationId, 'agent', transcript, latency);
+        await this.core.pushTranscript(
+          this.conversationId,
+          'agent',
+          transcript,
+          latency,
+          this.model,
+        );
         return;
       }
       case 'response.done': {

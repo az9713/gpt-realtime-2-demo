@@ -1,0 +1,28 @@
+id: translate_bilingual
+description: |
+  Spanish-speaking caller triggers translate mode. The bilingual
+  capture feature records BOTH the source-language transcript (via
+  the whisper sidecar) and the target-language transcript (via the
+  translate model). Eval asserts the mode is translate at end and
+  that the configured tools are still discoverable (the agent does
+  not actively call them in translate mode by design).
+vertical: hvac
+surface: phone
+language: es
+
+user_inputs:
+  - "Hola, necesito agendar un servicio."
+
+actions:
+  - kind: language
+    language: es
+  - kind: mode
+    mode: translate
+
+# Translate mode is a passthrough; no tools fire by design. The
+# bilingual transcript capture is exercised at the data-layer
+# level by tests/test_turn_model_tagging.py.
+expected_tool_calls: []
+expected_approvals: []
+expected_mode: translate
+expected_no_pii: true
