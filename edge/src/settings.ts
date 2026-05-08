@@ -5,6 +5,7 @@ export interface Settings {
   openaiApiKey: string;
   openaiRealtimeModel: string;
   openaiTranslateModel: string;
+  openaiWhisperModel: string;
   openaiVoice: string;
   twilioAccountSid: string;
   twilioAuthToken: string;
@@ -31,6 +32,7 @@ export function loadSettings(): Settings {
     openaiApiKey: process.env.OPENAI_API_KEY ?? '',
     openaiRealtimeModel: process.env.OPENAI_REALTIME_MODEL ?? 'gpt-realtime-2',
     openaiTranslateModel: process.env.OPENAI_TRANSLATE_MODEL ?? 'gpt-realtime-translate',
+    openaiWhisperModel: process.env.OPENAI_WHISPER_MODEL ?? 'gpt-realtime-whisper',
     openaiVoice: process.env.OPENAI_VOICE ?? 'alloy',
     twilioAccountSid: process.env.TWILIO_ACCOUNT_SID ?? '',
     twilioAuthToken: process.env.TWILIO_AUTH_TOKEN ?? '',

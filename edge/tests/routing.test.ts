@@ -10,6 +10,7 @@ const settings: Settings = {
   openaiApiKey: '',
   openaiRealtimeModel: 'gpt-realtime-2',
   openaiTranslateModel: 'gpt-realtime-translate',
+  openaiWhisperModel: 'gpt-realtime-whisper',
   openaiVoice: 'alloy',
   twilioAccountSid: '',
   twilioAuthToken: '',

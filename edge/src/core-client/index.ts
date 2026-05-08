@@ -94,13 +94,17 @@ export class CoreClient {
     role: 'user' | 'agent' | 'system' | 'tool',
     text: string,
     latencyMs?: number,
+    model?: string,
   ): Promise<void> {
+    const body: Record<string, unknown> = { role, text };
+    if (latencyMs !== undefined) body.latency_ms = latencyMs;
+    if (model !== undefined) body.model = model;
     const res = await request(
       `${this.settings.coreHttpUrl}/v1/sessions/${conversationId}/transcript`,
       {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ role, text, latency_ms: latencyMs }),
+        body: JSON.stringify(body),
       },
     );
     await res.body.dump();

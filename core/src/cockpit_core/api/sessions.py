@@ -174,10 +174,17 @@ async def post_mode_switch(conversation_id: str, body: ModeSwitchBody) -> dict[s
 
 @router.post("/{conversation_id}/transcript")
 async def post_transcript(conversation_id: str, payload: dict[str, Any]) -> dict[str, str]:
-    """Edge sends recognized transcript chunks here for persistence + tracing."""
+    """Edge sends recognized transcript chunks here for persistence + tracing.
+
+    `model` distinguishes which OpenAI model produced the transcript:
+        - 'realtime2' / 'translate' — agent-side recognition
+        - 'whisper'                 — gpt-realtime-whisper companion
+    Used by Phase 2 (bilingual capture) and Phase 5 (audit transcripts).
+    """
     role = payload.get("role", "user")
     text = payload.get("text", "")
     latency = payload.get("latency_ms")
+    model = payload.get("model")
     if role not in {"user", "agent", "tool", "system"}:
         raise HTTPException(400, f"invalid role: {role}")
     turn = await append_turn(
@@ -185,16 +192,17 @@ async def post_transcript(conversation_id: str, payload: dict[str, Any]) -> dict
         role=role,  # type: ignore[arg-type]
         transcript=text,
         latency_ms=latency,
+        model=model,
     )
     emit(
         conversation_id=conversation_id,
         kind=f"turn.{role}",
-        payload={"transcript_preview": text[:120], "turn_id": turn.id},
+        payload={"transcript_preview": text[:120], "turn_id": turn.id, "model": model},
     )
     await publish_session_event(
         conversation_id=conversation_id,
         kind="transcript",
-        payload={"role": role, "text": text, "turn_id": turn.id},
+        payload={"role": role, "text": text, "turn_id": turn.id, "model": model},
     )
     return {"status": "ok", "turn_id": turn.id}
 
