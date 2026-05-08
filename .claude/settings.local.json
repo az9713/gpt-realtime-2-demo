@@ -16,7 +16,16 @@
       "Bash(.venv/Scripts/python.exe -m pip install --quiet \"tzdata>=2024.2\")",
       "Bash(.venv/Scripts/python.exe -m pytest tests/test_audit.py -q)",
       "Bash(.venv/Scripts/python.exe -m pytest tests/test_synthesize_eval.py -q)",
-      "Bash(.venv/Scripts/python.exe -m mypy --strict src)"
+      "Bash(.venv/Scripts/python.exe -m mypy --strict src)",
+      "Bash(curl -s http://localhost:8000/healthz)",
+      "Bash(curl -s http://localhost:8080/healthz)",
+      "Bash(curl -s http://localhost:8000/v1/verticals/hvac/business-status)",
+      "Bash(curl -s http://localhost:8000/v1/audits/divergences)",
+      "Bash(curl -s \"http://localhost:5173/v1/conversations?limit=5&mode=voicemail\")",
+      "Bash(curl -s \"http://localhost:8000/v1/conversations?limit=5&mode=voicemail\")",
+      "Bash(curl -s \"http://localhost:5173/v1/audits/divergences\")",
+      "WebFetch(domain:developers.openai.com)",
+      "WebFetch(domain:platform.openai.com)"
     ]
   }
 }

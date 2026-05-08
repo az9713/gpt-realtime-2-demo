@@ -81,7 +81,11 @@ export class TranscriptionSession {
       this.opened = true;
       return;
     }
-    const url = `wss://api.openai.com/v1/realtime?model=${encodeURIComponent(this.model)}`;
+    // GA transcription sessions live at the dedicated `?intent=transcription`
+    // endpoint. The model is configured via `audio.input.transcription.model`
+    // in the session.update; passing `model=` in the URL is rejected with
+    // "You must not provide a model parameter for transcription sessions."
+    const url = 'wss://api.openai.com/v1/realtime?intent=transcription';
     const factory = this.opts.wsFactory ?? defaultWsFactory;
     const ws = factory(url, {
       headers: { Authorization: `Bearer ${this.settings.openaiApiKey}` },
@@ -94,9 +98,12 @@ export class TranscriptionSession {
         { conv: this.config.conversationId, model: this.model },
         'transcription_session_open',
       );
-      // Whisper-only session shape: no tools, no audio output,
-      // no instructions. We just ask it to transcribe the input
-      // audio buffer.
+      // Whisper-only session shape (GA):
+      //   - session.type: "transcription"
+      //   - audio.input.transcription.model: the actual whisper model id
+      //   - NO turn_detection (rejected: "Turn detection is not supported
+      //     for this transcription model.")
+      //   - NO audio.output, NO output_modalities, NO tools, NO instructions
       this.send({
         type: 'session.update',
         session: {
@@ -104,8 +111,7 @@ export class TranscriptionSession {
           audio: {
             input: {
               format: { type: 'audio/pcm', rate: 24_000 },
-              turn_detection: { type: 'semantic_vad' },
-              transcription: { model: 'whisper-1' },
+              transcription: { model: this.model },
             },
           },
         },
@@ -183,10 +189,18 @@ export class TranscriptionSession {
         return;
       }
       case 'error': {
+        // Log once per session, then close. Repeated errors from the same
+        // misconfigured session would otherwise drown the edge logs — and
+        // since whisper rejects in session.update, the session is unusable.
         log.error(
           { event, conv: this.config.conversationId },
           'transcription_server_error_event',
         );
+        try {
+          this.ws?.close();
+        } catch {
+          /* ignore */
+        }
         return;
       }
       default:

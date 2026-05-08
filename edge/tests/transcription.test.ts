@@ -82,7 +82,19 @@ test('open() sends a transcription-shaped session.update', async () => {
   // microtask delay so the constructed WS fires 'open' and our session.update is sent
   await new Promise((r) => setImmediate(r));
 
+  // URL must hit the dedicated transcription endpoint; passing `?model=...`
+  // is rejected with "You must not provide a model parameter for transcription
+  // sessions."
   assert.equal(sockets.length, 1);
+  assert.ok(
+    sockets[0]!.url.includes('intent=transcription'),
+    'transcription WS URL must include intent=transcription',
+  );
+  assert.ok(
+    !sockets[0]!.url.includes('model='),
+    'transcription WS URL must NOT include model= query',
+  );
+
   const sent = sockets[0]!.firstSentOfType('session.update');
   assert.ok(sent, 'session.update should have been sent');
 
@@ -92,9 +104,23 @@ test('open() sends a transcription-shaped session.update', async () => {
   assert.ok(!('tools' in session), 'should not declare tools');
   assert.ok(!('instructions' in session), 'should not declare instructions');
 
-  const audio = session.audio as { input?: Record<string, unknown>; output?: Record<string, unknown> };
+  const audio = session.audio as {
+    input?: Record<string, unknown>;
+    output?: Record<string, unknown>;
+  };
   assert.ok(audio.input, 'audio.input present');
   assert.ok(!audio.output, 'audio.output should not be set');
+  // GA whisper rejects turn_detection: "Turn detection is not supported
+  // for this transcription model."
+  assert.ok(
+    !('turn_detection' in (audio.input ?? {})),
+    'audio.input must NOT carry turn_detection',
+  );
+  // Model id flows through audio.input.transcription.model, not the URL.
+  const transcription = (audio.input as Record<string, unknown>).transcription as {
+    model?: string;
+  };
+  assert.equal(transcription.model, 'gpt-realtime-whisper');
 });
 
 test('completed transcript event is forwarded and persisted with model=whisper', async () => {
