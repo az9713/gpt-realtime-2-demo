@@ -1,0 +1,48 @@
+# --- secrets ---
+.env
+.env.local
+.env.*.local
+
+# --- python ---
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+.uv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+htmlcov/
+.coverage
+
+# --- node ---
+node_modules/
+.npm/
+*.tsbuildinfo
+
+# --- frontend ---
+frontend/dist/
+
+# --- editor ---
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# --- runtime data ---
+data/
+*.log
+*.sqlite
+*.sqlite-journal
+
+# --- test artifacts ---
+.coverage*
+coverage/
+htmlcov/
+junit.xml
+
+# --- docker ---
+.docker-compose-overrides.yml

@@ -1,0 +1,25 @@
+name: hvac
+version: 0.1.0
+persona: Aria
+modes:
+  - realtime2
+  - translate
+surfaces:
+  - browser
+  - phone
+languages:
+  - en
+  - es
+  - fr
+auto_translate_non_english: true
+
+description: |
+  HVAC dispatcher for a small operator. Handles inbound homeowner and
+  technician calls, looks up parts and schedules, and gates dangerous
+  scheduling/dispatch actions behind dispatcher approval.
+
+surfaces_meta:
+  phone:
+    primary: true
+  browser:
+    primary: false  # for the human dispatcher

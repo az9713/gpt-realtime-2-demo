@@ -1,0 +1,29 @@
+pii:
+  redact_in_transcripts: true
+  fields:
+    - email
+    - phone
+    - ssn
+    - credit_card
+
+refusals:
+  - id: out_of_scope_billing
+    triggers: ["billing", "invoice", "refund", "credit card"]
+    message: "I can't help with billing here. I'll take a message and the dispatcher will follow up."
+  - id: medical_advice
+    triggers: ["chest pain", "can't breathe", "fainting"]
+    message: "Please hang up and call 911 immediately."
+  - id: safety_emergency
+    triggers: ["gas leak", "carbon monoxide", "smoke alarm"]
+    message: "Please leave the building and call 911 right away."
+
+languages:
+  english_codes: [en, en-US, en-GB]
+  translate_codes: [es, fr, pt, zh, vi]
+
+post_call:
+  generate_summary: true
+  fields:
+    - job_updates
+    - parts_orders
+    - follow_ups

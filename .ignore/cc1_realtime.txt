@@ -1,0 +1,679 @@
+
+simon@Simon_laptop MINGW64 ~/Downloads/gpt-realtime-2_openai
+$ claude-yolo --chrome --name realtime
+╭─── Claude Code v2.1.133 ─────────────────────────────────────────────────────╮
+│                                                    │ Tips for getting        │
+│                 Welcome back Simon!                │ started                 │
+│                                                    │ Run /init to create a … │
+│                       ▐▛███▜▌                      │ ─────────────────────── │
+│                      ▝▜█████▛▘                     │ What's new              │
+│                        ▘▘ ▝▝                       │ Added `worktree.baseRe… │
+│        Opus 4.7 (1M context) · Claude Max ·        │ Added `sandbox.bwrapPa… │
+│        az9713@yahoo.com's Organization             │ Added `parentSettingsB… │
+│          ~\Downloads\gpt-realtime-2_openai         │ /release-notes for more │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+> read docs/*                                                                   
+  Searched for 1 pattern, read 2 files (ctrl+o to expand)
+
+● Both files read. Summary:                                                     
+  docs/transcript.txt — Transcript of OpenAI's launch demo for three new audio    API models:                                                                     - GPT-Realtime-2: voice model with GPT-5-class reasoning, parallel tool         calling, preamble support, and ability to stay in conversation while            reasoning/calling tools
+  - GPT-Realtime-Translate: live translation across 70+ input → 13 output
+  languages
+  - GPT-Realtime-Whisper: streaming speech-to-text
+
+  The demo shows a personal voice assistant doing calendar lookups and CRM
+  updates while narrating tool-calls via preambles, and a French↔English↔German
+  live translation flow.
+
+  docs/gpt-realtime-2-docs.txt — A link list pointing to:
+  - The launch video and community post
+  - OpenAI's announcement page
+  - Developer guides: voice agents, realtime, realtime-conversations,
+  realtime-webrtc, realtime-models-prompting, realtime-websocket, tools
+  - Agents guides: running, orchestration, guardrails/approvals,
+  integrations/observability
+
+  No code, just source material — looks like prep for building something on top
+  of GPT-Realtime-2. What would you like to do with it?
+
+✻ Sautéed for 38s
+
+──────────────────────────────────────────────────────────────────── realtime ──
+> please suggest a number of projects showcasing the gpt realtime features
+  from the documents, including voice-agents, realtime-conversations, webrtc,     websocket, prompting. for agentic  applications, make use also                  running-agents, orchestration, guardrails-approvals and                         integrations-observability.                                                   > please suggest a number of projects showcasing the gpt realtime features from    the documents, including voice-agents, realtime-conversations, webrtc,         websocket, prompting. for agentic  applications, make use also                  running-agents, orchestration, guardrails-approvals and                         integrations-observability.                                                                                                                                   ● Here are seven project ideas, each mapped to the guides it exercises. They      escalate from "single-feature demo" to "full agentic stack."                                                                                                    1. Polyglot Meeting Companion                                                                                                                                   A browser tab you drop into Zoom/Meet that live-translates the room and         produces a multilingual transcript + action-item list at the end.               - Showcases: Realtime-Translate streaming, WebRTC for low-latency mic/speaker,   realtime-conversations for the running transcript, prompting to bias           terminology (product names, acronyms).                                          - Spice: speaker-diarized output, "translate everything except my native        tongue" toggle.                                                                                                                                                 2. Voice-First Personal Ops Assistant (the demo, but yours)                                                                                                     Recreate the keynote: calendar lookup, CRM update, "stay quiet until I say      back to demo." Wire it to your stack — Google Calendar, Linear, Notion, Slack.
+  - Showcases: Realtime-2 reasoning, voice-agents, running-agents, prompting
+  with preambles ("let me pull the latest context…"), parallel tool calls.
+  - Spice: "passive listening" mode where the agent only speaks when addressed.
+
+  3. Phone-Number Concierge (Telephony Bridge)
+
+  A real phone number (Twilio/Telnyx SIP) that answers, takes a booking or files
+   a ticket, and hands hard cases to a human.
+  - Showcases: WebSocket transport (telephony providers stream μ-law audio over
+  WS), guardrails-approvals for refunds/PII, integrations-observability for call
+   recordings + traces.
+  - Spice: dual-channel barge-in, post-call summary emailed to the customer.
+
+  4. Voice-Driven DevOps Copilot
+
+  "Ship the staging build, then tail the deploy logs and tell me when health
+  checks pass." Multi-agent: planner → executor → observer.
+  - Showcases: orchestration (specialist sub-agents for kubectl, GitHub,
+  Datadog), guardrails-approvals (require spoken "yes, proceed" before any prod
+  write), WebSocket for long-running streams, running-agents.
+  - Spice: the agent narrates its reasoning aloud while tools run — true
+  preamble UX.
+
+  5. Live-Stream Co-Host
+
+  A web overlay that joins your stream, reads chat, calls trivia/lookup tools,
+  and chimes in with a distinct voice.
+  - Showcases: WebRTC, realtime-conversations with persistent chat-history
+  context, prompting for personality + safety rails (don't read banned words),
+  observability for "what did the bot say in the last hour."
+
+  6. Field-Service Technician Headset
+
+  Hands-free assistant for an HVAC tech: "what's the torque spec on this
+  compressor model?" — pulls from a manuals RAG, can open a warranty ticket.
+  - Showcases: voice-agents with tool calls into a vector store,
+  guardrails-approvals for ordering parts, WebRTC with push-to-talk, prompting
+  tuned for noisy environments and short turns.
+
+  7. Realtime Voice "Lab" — Observability Playground
+
+  Not a product, a dashboard. Run any of the above through a single harness that
+   exposes: token costs per turn, tool-call traces, interrupt/barge-in events,
+  latency waterfalls, prompt-version A/B.
+  - Showcases: integrations-observability end-to-end, plus a guardrail evaluator
+   that scores each turn (hallucination, PII leak, tone).
+  - Use it as the test bench for projects 1–6.
+
+  ---
+  If you want, I can flesh one of these out into a spec + scaffold — projects 2
+  (broad feature coverage, single-machine) or 3 (the most "production-shaped"
+  with telephony + approvals + observability) are the strongest demos. Which
+  direction appeals?
+
+✻ Cogitated for 36s
+
+> is it possible to have one project that combines most if not all the features 
+● Yes — the cleanest way is a "Voice Operations Cockpit": one app, multiple       surfaces, with a shared agent core and a shared observability spine. Almost
+  every feature has a natural home, with two honest caveats: WebRTC vs WebSocket   end up as transport choices per surface rather than both running on the same   call, and Translate vs Realtime-2 are modes the user switches between (you      don't realistically run both on the same audio stream).
+
+  The shape
+
+  ┌─────────────────────────────────────────────────────────┐
+  │              OBSERVABILITY + GUARDRAILS SPINE           │  ←
+  integrations-observability
+  │  (traces, costs, PII filter, approval queue, eval'd)    │
+  guardrails-approvals
+  └─────────────────────────────────────────────────────────┘
+              ▲             ▲              ▲
+     ┌────────┴───┐  ┌──────┴──────┐  ┌────┴────────┐
+     │ Browser    │  │ Phone line  │  │ Meeting     │
+     │ Cockpit    │  │ Concierge   │  │ Companion   │
+     │ (WebRTC)   │  │ (WebSocket) │  │ (WebRTC)    │
+     │ Realtime-2 │  │ Realtime-2  │  │ Translate   │
+     └────────────┘  └─────────────┘  └─────────────┘
+              ▲             ▲              ▲
+              └─────────────┼──────────────┘
+                            │
+                  ┌─────────┴──────────┐
+                  │   AGENT CORE       │  ← running-agents, orchestration
+                  │ planner → workers  │     prompting (preambles, voice
+  persona)
+                  │ tools: calendar,   │     realtime-conversations (shared
+  memory)
+                  │ CRM, deploys, RAG  │
+                  └────────────────────┘
+
+  How each guide lands
+
+  ┌────────────────────────────┬─────────────────────────────────────────────┐
+  │           Guide            │               Where it lives                │
+  ├────────────────────────────┼─────────────────────────────────────────────┤
+  │ voice-agents               │ The cockpit's primary loop — "do this for   │
+  │                            │ me"                                         │
+  ├────────────────────────────┼─────────────────────────────────────────────┤
+  │ realtime-conversations     │ Shared session memory across surfaces (call │
+  │                            │  → browser handoff)                         │
+  ├────────────────────────────┼─────────────────────────────────────────────┤
+  │ realtime-webrtc            │ Browser cockpit + meeting overlay           │
+  ├────────────────────────────┼─────────────────────────────────────────────┤
+  │ realtime-websocket         │ Phone bridge (Twilio/SIP) — telephony       │
+  │                            │ forces WS                                   │
+  ├────────────────────────────┼─────────────────────────────────────────────┤
+  │ realtime-models-prompting  │ Persona, preambles during tool calls, "stay │
+  │                            │  quiet until…" mode                         │
+  ├────────────────────────────┼─────────────────────────────────────────────┤
+  │ running-agents             │ Each turn dispatches a planner + workers    │
+  │                            │ behind the voice                            │
+  ├────────────────────────────┼─────────────────────────────────────────────┤
+  │ orchestration              │ Specialist sub-agents (CRM, deploy, lookup) │
+  │                            │  coordinated by the planner                 │
+  ├────────────────────────────┼─────────────────────────────────────────────┤
+  │ guardrails-approvals       │ Spoken "yes, proceed" + queue for high-risk │
+  │                            │  ops (prod writes, refunds)                 │
+  ├────────────────────────────┼─────────────────────────────────────────────┤
+  │ integrations-observability │ One dashboard: latency waterfalls, costs,   │
+  │                            │ tool traces, eval scores                    │
+  ├────────────────────────────┼─────────────────────────────────────────────┤
+  │ (translate)                │ Meeting Companion mode — same agent core,   │
+  │                            │ swapped model                               │
+  └────────────────────────────┴─────────────────────────────────────────────┘
+
+  What makes it one project, not three glued together
+
+  Three things have to be shared, or you've just built a portfolio in a
+  monorepo:
+  1. One agent core — the same planner + tools serve the browser, phone, and
+  meeting overlay.
+  2. One conversation store — start on phone, finish in browser; the cockpit can
+   replay/handoff.
+  3. One observability + guardrails layer — every turn flows through the same
+  trace + approval pipeline regardless of transport.
+
+  Honest tradeoffs
+
+  - Scope is real. This is 4–6 weeks of focused work, not a weekend. The phone
+  bridge alone (SIP, μ-law, barge-in) is a project.
+  - You'll feature-flag transports. WebRTC and WebSocket aren't combined —
+  they're parallel surfaces. That's fine; the agent is what's unified.
+  - The temptation is to build everything shallow. A stronger demo picks two
+  surfaces deep (browser cockpit + phone bridge) and one mode (Realtime-2 with
+  Translate as a toggle), all riding the shared spine. That still touches every
+  guide.
+
+  My recommendation
+
+  Build the cockpit as browser (WebRTC) + phone (WebSocket) on a shared agent
+  core, with the observability spine and approvals from day one. Add Translate
+  as a mode switch in week 3. Skip the Zoom overlay until the core is solid — it
+   adds platform integration pain without teaching you anything new about the
+  API.
+
+  Want me to write this up as a proper spec (using agent-skills:spec), or sketch
+   the directory layout and core interfaces first?
+
+✻ Cogitated for 36s
+
+──────────────────────────────────────────────────────────────────── realtime ──> 
+────────────────────────────────────────────────────────────────────────────────
+  | Opus 4.7 (1M context) | gpt-realtime-2_openai | ctx 6% | 5h 9% | 7d 11% |
+  ⏵⏵ bypass permissions on (shift+tab to cycle)                                                                                                                 
+
+
+
+
+> great. walk me through some real life use cases for this app. give me at        least 3 use cases.
+                                                                                * Tinkering… (1m 10s · ↓ 2.5k tokens)                                             ⎿  Tip: Run /install-slack-app to use Claude in Slack                                                                                                         ──────────────────────────────────────────────────────────────────── realtime ──
+> 
+────────────────────────────────────────────────────────────────────────────────
+  | Opus 4.7 (1M context) | gpt-realtime-2_openai | ctx 6% | 5h 9% | 7d 11% |
+  ⏵⏵ bypass permissions on (shift+tab to cycle)
+
+                                                                               ● Four use cases — different industries, each one exercising a different slice    of the cockpit so the combination is justified.                                                                                                                 ---                                                                             1. Boutique Real Estate Brokerage — "Marina, broker-owner of a 4-agent shop"
+
+  Tuesday, 10:42am. A Spanish-speaking buyer calls the office number while
+  Marina is on her laptop reviewing comps.
+
+  - The phone rings into the cockpit. Phone bridge (WebSocket) picks up: "Thanks
+   for calling Bayfront Realty, this is Aria — would you prefer English or
+  Spanish?"
+  - Caller chooses Spanish. The agent stays in Spanish; cockpit shows Marina a
+  live English transcript via the Translate mode running on the call audio.
+  - Caller asks about the listing on 412 Pine. Aria calls the MLS tool, reads
+  price + status, then says "let me check whether it's still available — one
+  moment." (Preamble prompting so the caller doesn't hear dead air.)
+  - Caller wants to schedule a showing. Aria proposes Thursday 2pm. Conversation
+   memory — Marina's calendar, her co-broker's calendar, the listing agent's
+  calendar — all in scope.
+  - Aria attempts to book. Booking a showing on a listing >$1M triggers an
+  approval guardrail. Marina sees a one-line card in her browser cockpit:
+  "Approve showing of 412 Pine to caller (verified phone match)?" She clicks ✓.
+  - Call ends. Cockpit auto-files: contact in CRM, showing on calendar, English
+  transcript + Spanish audio in the deal record. Observability logs: 4m12s call,
+   6 tool calls, $0.31, 1 approval, no PII flags.
+
+  Why this is the cockpit: WebSocket telephony + Translate + approvals + CRM
+  tools, with the broker watching from the WebRTC browser side. Marina never
+  picked up the phone.
+
+  ---
+  2. HVAC Contractor — "Reggie, dispatcher for a 12-truck shop"
+
+  Wednesday, 7:15am. Trucks rolling. Reggie is in the cockpit; techs check in by
+   voice from their cabs.
+
+  - Tech calls in via the company phone tree: "Reggie, the Hendricks job —
+  compressor's seized, I need part number for the replacement on a Lennox XC21."
+   Phone bridge routes the audio; the cockpit's agent orchestration dispatches a
+   sub-agent that hits the parts-manual RAG.
+  - Voice replies in 3 seconds: "Pulling that up… part is 100483-12, you have
+  one in truck 7's stock or the shop has three." Tech confirms truck 7.
+  - Same tech: "Customer wants to know warranty status." Cockpit calls the
+  warranty lookup, finds the unit is 14 months in, out of standard warranty but
+  on extended. Preamble: "Checking warranty registration… they're covered under
+  the extended plan through 2027."
+  - Meanwhile in the browser cockpit, a residential customer is on a different
+  line asking to reschedule. Marina-style flow: agent reschedules, but the move
+  pushes another job — that's a multi-agent orchestration moment (scheduler
+  agent flags the conflict, planner agent proposes a swap, Reggie approves with
+  a spoken "yes, do it").
+  - A Spanish-speaking customer calls about a no-cool. Translate mode kicks in;
+  Reggie sees English transcript and dispatches truck 4.
+  - End of day, observability dashboard: 47 calls handled, 3 approvals, 2
+  escalations to Reggie, average response 1.8s, $14 in API spend.
+
+  Why this is the cockpit: Phone-heavy, multi-agent orchestration earns its
+  complexity (dispatch is genuinely a coordination problem), translate is a real
+   need, approvals gate things that cost money (parts orders, schedule
+  shuffles).
+
+  ---
+  3. Solo SaaS Founder — "Devon, building a B2B analytics product"
+
+  Thursday afternoon. Devon is shipping a release. He's wearing AirPods, pacing
+  the kitchen.
+
+  - "Aria, what's on fire?" Cockpit (browser, WebRTC) reads: 2 Sentry alerts on
+  the auth service, 1 customer on Intercom mentioning slowness, deploy is green
+  on staging.
+  - "Tail the deploy logs and tell me when health checks pass on prod, but don't
+   ship yet." The agent kicks off a long-running background task
+  (running-agents) and narrates: "deploy queued… build artifact uploaded…
+  running migrations… all checks green, holding for your go-ahead."
+  - A potential customer calls the Calendly-attached number for a demo. Phone
+  bridge picks up — Aria knows from the calendar this is the AcmeCo intro. She
+  does a 90-second qualification, books a follow-up, drops a Slack note in
+  #sales. Devon never breaks his deploy flow.
+  - "Okay, ship prod." — high-blast-radius action, approval guardrail: cockpit
+  makes him say the magic phrase "ship it, my responsibility" before the prod
+  deploy fires. (You set this up because you got burned once.)
+  - 3 minutes later: "Prod healthy, latency p95 down 8%. Want me to draft the
+  changelog?" Devon: "Yeah, post it to #releases."
+  - Evening: observability dashboard shows the day: 6 calls handled by agent, 2
+  approvals, 1 escalation (refund request — agent declined autonomously, queued
+  for Devon).
+
+  Why this is the cockpit: Browser-first (WebRTC), agent does real work
+  (deploys), guardrails on prod writes are the difference between "neat demo"
+  and "actually useful." Phone bridge is secondary but earns its keep on inbound
+   demos.
+
+  ---
+  4. Multilingual Telehealth Intake — "Northside Family Clinic, 3 front-desk
+  staff"
+
+  Monday, 8:30am. Phone lines light up. Front desk is two people short.
+
+  - Patient calls in Mandarin. Phone bridge + Translate — agent handles intake
+  in Mandarin while the front-desk staff sees English. Patient is rebooking;
+  agent confirms insurance is current via the EHR tool, books the slot. Heavy
+  prompting keeps the agent inside scope — no medical advice, no diagnoses, only
+   intake.
+  - Mid-call, patient asks: "my chest has been hurting" — this trips a safety
+  guardrail. Agent: "I'm going to connect you with a nurse right now, please
+  stay on the line." Warm-transfer to triage nurse, transcript handed over.
+  - Front-desk staff member uses the browser cockpit to bulk-handle the
+  morning's voicemails: "summarize each one, group by reason, draft callbacks
+  for the routine ones." Cockpit's orchestration spawns parallel sub-agents per
+  voicemail, returns a triaged list in 90 seconds.
+  - A specialist calls in for a referral consult — Realtime-2 mode, English,
+  with access to the patient record (after approval prompt confirming the
+  specialist's identity via known caller ID + spoken passphrase).
+  - Observability spine logs every interaction with PHI markers; nightly export
+  to the compliance audit log. Any turn flagged by the safety classifier is held
+   for human review before hitting the EHR.
+
+  Why this is the cockpit: Maximum guardrail surface (HIPAA-shaped), translate
+  is non-negotiable, phone bridge is the primary channel, browser cockpit is for
+   staff power-users, observability is a compliance requirement not a
+  nice-to-have.
+
+  ---
+  Pattern across all four
+
+  The combination earns its keep when the same agent brain has to show up on
+  multiple surfaces, with the same memory, under the same rules, observed the
+  same way. Single-surface tools fragment the customer record and force humans
+  to be the integration layer. The cockpit is the integration layer.
+
+  Want me to pick the strongest one and turn it into a real spec + scaffold? My
+  pick would be #2 (HVAC dispatcher) — it's the most differentiated (phone-first
+   orchestration + translate is a real underserved need) and least sensitive to
+  demo politics (no HIPAA, no founder-ego, no real estate licensing).
+
+✻ Brewed for 1m 12s
+
+──────────────────────────────────────────────────────────────────── realtime ──> write the spec for the HVAC dispatcher                                        ────────────────────────────────────────────────────────────────────────────────  | Opus 4.7 (1M context) | gpt-realtime-2_openai | ctx 6% | 5h 10% | 7d 11% |
+  ⏵⏵ bypass permissions on (shift+tab to cycle)
+
+
+
+
+> why would you turn only #2 into a real spec ? why not spec for the entire       project:                                                                          What makes it one project, not three glued together                                                                                                             Three things have to be shared, or you've just built a portfolio in a           monorepo:                                                                       1. One agent core — the same planner + tools serve the browser, phone, and      meeting overlay.
+    2. One conversation store — start on phone, finish in browser; the cockpit
+  can
+     replay/handoff.
+    3. One observability + guardrails layer — every turn flows through the same
+    trace + approval pipeline regardless of transport.
+
+
+
+● You're right — I conflated two different things. Let me separate them.
+
+  Spec the platform. Build a thin slice. Validate against multiple use cases.
+                                                                                  The cockpit is one project, and its spec is the platform spec — the agent
+  core, the conversation store, the observability/guardrails spine, the
+  transport adapters (WebRTC + WebSocket), the mode switch (Realtime-2 ↔
+  Translate). That spec doesn't change whether the customer is a brokerage or an
+   HVAC shop. Specing only #2 would have produced a vertical app, not the
+  cockpit.
+
+  My narrowing instinct was about what to build first, not what to spec. Those
+  are different decisions:
+
+  Layer: Platform spec
+  Scope: The whole cockpit — all 3 shared things, both transports, both modes,
+    the agent contract, the guardrail/approval protocol, the trace schema
+  Why: This is the thesis. Skipping it means each use case re-invents the
+  wiring.
+  ────────────────────────────────────────
+  Layer: Vertical specs (one per use case)
+  Scope: Just the tools, prompts, guardrail policies, and approval rules for
+  that
+    domain
+  Why: These are configurations of the platform — proof that the platform
+    generalizes.
+  ────────────────────────────────────────
+  Layer: Build order
+  Scope: Thin vertical slice: one transport + one mode + one tool + one
+  guardrail
+    + the trace pipeline, all working end-to-end
+  Why: Proves the platform's seams are right before you scale surface area.
+
+  The reason I picked #2 wasn't "only spec this one" — it was "use this one as
+  the first vertical to ride on the platform, because dispatch genuinely needs
+  orchestration and that stresses the agent core hardest." That's a build-order
+  argument, not a spec-scope argument. I should have said that.
+
+  Proposed spec structure
+
+  specs/
+  ├── 00-platform.md           ← the cockpit itself: agent core, store, spine,
+  transports, modes
+  ├── 10-agent-contract.md     ← what every vertical agent must implement
+  ├── 11-guardrail-protocol.md ← approval flow, PII filter, refusal taxonomy
+  ├── 12-trace-schema.md       ← what observability captures, retention, export
+  ├── 20-vertical-realestate.md
+  ├── 21-vertical-hvac.md
+  ├── 22-vertical-founder.md
+  └── 23-vertical-telehealth.md
+
+  The platform specs (00–12) are what we write first and what defines "the
+  project." The verticals (20–23) come later — and frankly you might only build
+  one or two; the others exist as design pressure to prove the platform
+  abstractions hold.
+
+  Want me to start with 00-platform.md using the agent-skills:spec workflow?
+  That's the load-bearing document.
+
+✻ Crunched for 29s
+                                                                                ※ recap: Goal: spec a unified GPT-Realtime voice cockpit (browser + phone, agent   core, shared store, guardrails, observability) with multiple vertical use      cases riding on it. Next action: write the platform spec at                     specs/00-platform.md using the agent-skills:spec workflow. (disable recaps in
+  /config)
+
+──────────────────────────────────────────────────────────────────── realtime ──
+> 
+────────────────────────────────────────────────────────────────────────────────
+  | Opus 4.7 (1M context) | gpt-realtime-2_openai | ctx 7% | 5h 11% | 7d 11% |
+  ⏵⏵ bypass permissions on (shift+tab to cycle)
+
+
+
+
+> i would like to build the entire platform, ie. the entire unified               GPT-Realtime voice cockpit with multiple vertical use cases on it. Please       write the spec accordingly.                                                                                                                                   ● Skill(agent-skills:spec)
+  ⎿  Successfully loaded skill
+                                                                                ● Before I write the spec, I want to surface assumptions and lock in a few
+  choices that materially change what gets specced.                                                                                                               Assumptions I'm making — correct me if any are wrong:
+  1. OpenAI Realtime API is the only voice provider (no Anthropic/Google
+  fallback).
+  2. WebRTC is for browser, WebSocket is for telephony — not interchangeable.
+  3. The four verticals (real-estate, HVAC, founder, telehealth) are
+  configurations on the shared platform, not separate apps — each one ships as a
+   package of (tools + prompts + guardrail policies + approval rules).
+  4. v1 targets a small team / solo operator, self-hosted; multi-tenant SaaS is
+  a v2 concern.
+  5. The spec describes the whole platform; the build will land it in thin
+  vertical slices, not big-bang.
+
+  The four questions whose answers actually change the spec:
+────────────────────────────────────────────────────────────────────────────────←  [ ] Stack  [ ] Telephony  [ ] Verticals  [ ] Deploy  √ Submit  →
+
+W  The four questions whose answers actually change the spec:
+────────────────────────────────────────────────────────────────────────────────←  [ ] Stack  [ ] Telephony  [ ] Verticals  [ ] Deploy  √ Submit  →
+
+What backend stack do you want?                                                 
+  1. TypeScript / Node (single language)
+     One language across backend and frontend. Best ecosystem for OpenAI
+     Realtime + WebRTC + Twilio. Recommended for speed of build and smaller
+     team.
+  2. Python (FastAPI) + minimal TS frontend
+     Python for the agent core and tools; thin React frontend. Better if you
+     have Python tool integrations (data, ML, internal scripts).
+> 3. Hybrid: Python agent core + Node transport edge
+     Python for orchestration/agents/tools, Node for WebRTC/WebSocket signaling.
+      More moving parts but each language plays to its strength.
+  4. Type something.
+────────────────────────────────────────────────────────────────────────────────
+  5. Chat about this
+
+Enter to select · Tab/Arrow keys to navigate · Esc to cancel
+
+
+──────────────────────────────────────────────────────────────────────────────←  [×] Stack  [ ] Telephony  [ ] Verticals  [ ] Deploy  √ Submit  →
+
+Which telephony provider for the phone bridge?                                  
+> 1. Twilio Media Streams (Recommended)
+     Most documented path for OpenAI Realtime over WebSocket. Mature SDK, easy
+     phone-number provisioning, well-known μ-law streaming pattern.
+  2. Telnyx
+     Cheaper at scale, similar Media Streams API. Less third-party tutorials but
+      solid docs.
+  3. Skip telephony in v1 — browser only
+     Defer the phone bridge. Spec it as an interface but don't implement. Faster
+      to ship, but loses the strongest 'multi-surface' demo.
+  4. Vonage / Plivo / SIP-direct
+     Other providers or raw SIP. More custom integration work.
+  5. Type something.                                                            ────────────────────────────────────────────────────────────────────────────────
+  6. Chat about this
+
+Enter to select · Tab/Arrow keys to navigate · Esc to cancel
+
+───────────────────────────────────────────────────────────────────────────────←  [×] Stack  [×] Telephony  [ ] Verticals  [ ] Deploy  √ Submit  →
+
+Which verticals should v1 ship with?                                            
+> 1. [ ] HVAC dispatcher (Recommended)
+  Stresses orchestration hardest — multi-truck dispatch, parts lookup,
+  scheduling conflicts. Validates the agent core.
+  2. [ ] Real-estate brokerage
+  Best translate-mode demo. Validates phone bridge + approval flow on high-value
+   actions.
+  3. [ ] Solo SaaS founder ops
+  Browser-cockpit-heavy, deploys as tools, long-running tasks. Validates
+  background work + spoken-approval flow.
+  4. [ ] Telehealth intake
+  Maximum guardrail surface (HIPAA-shaped), language coverage, safety
+  classifier. Validates the safety/compliance spine but is the most regulated to   demo.
+  5. [ ] Type something
+     Next
+────────────────────────────────────────────────────────────────────────────────
+  6. Chat about this
+
+Enter t
+
+
+
+
+What deployment posture for v1?
+
+> 1. Single-tenant, docker-compose self-host (Recommended)
+     One operator, one config, runs on their box or a small VPS. Postgres +
+     Redis + app via compose. Simplest path; multi-tenant is a v2 refactor.
+  2. Single-tenant, deploy to one cloud (Fly.io / Render / Railway)
+     Same scope but cloud-native deploy from day one. Slightly more infra spec,
+     easier to share with collaborators.
+  3. Multi-tenant SaaS from day one
+     Tenant isolation, per-tenant configs, billing hooks. Significantly more
+     surface area in the spec — auth, RLS, key management.
+  4. Type something.
+────────────────────────────────────────────────────────────────────────────────  5. Chat about this
+
+Enter to select · Tab/Arrow keys to navigate · Esc to cancel
+
+────────────────────────────────────────────────────────────────────────────────←  [×] Stack  [×] Telephony  [×] Verticals  [×] Deploy  √ Submit  →
+
+Review your answers
+
+ ● What backend stack do you want?
+   → Hybrid: Python agent core + Node transport edge
+ ● Which telephony provider for the phone bridge?
+   → Twilio Media Streams (Recommended)
+ ● Which verticals should v1 ship with?
+   → HVAC dispatcher (Recommended)
+ ● What deployment posture for v1?
+   → Single-tenant, docker-compose self-host (Recommended)
+                                                                                Ready to submit your answers?
+
+> 1. Submit answers
+  2. Cancel
+
+  The four questions whose answers actually change the spec:
+
+● User answered Claude's questions:
+  ⎿  · What backend stack do you want? → Hybrid: Python agent core + Node
+     transport edge                                                                  · Which telephony provider for the phone bridge? → Twilio Media Streams
+     (Recommended)
+     · Which verticals should v1 ship with? → HVAC dispatcher (Recommended)
+     · What deployment posture for v1? → Single-tenant, docker-compose self-host
+      (Recommended)
+
+✽ Choreographing… (50s · ↓ 2.9k tokens · thinking some more)
+
+──────────────────────────────────────────────────────────────────── realtime ──
+> 
+────────────────────────────────────────────────────────────────────────────────
+  | Opus 4.7 (1M context) | gpt-realtime-2_openai | ctx 7% | 5h 12% | 7d 11% |
+  ⏵⏵ bypass permissions on (shift+tab to cycle)
+    
+
+
+
+> i would like to build the entire platform, ie. the entire unified               GPT-Realtime voice cockpit with multiple vertical use cases on it. Please       write the spec accordingly.                                                                                                                                   ● Skill(agent-skills:spec)
+  ⎿  Successfully loaded skill
+                                                                                ● Before I write the spec, I want to surface assumptions and lock in a few
+  choices that materially change what gets specced.                                                                                                               Assumptions I'm making — correct me if any are wrong:
+  1. OpenAI Realtime API is the only voice provider (no Anthropic/Google
+  fallback).
+  2. WebRTC is for browser, WebSocket is for telephony — not interchangeable.
+  3. The four verticals (real-estate, HVAC, founder, telehealth) are
+  configurations on the shared platform, not separate apps — each one ships as a
+   package of (tools + prompts + guardrail policies + approval rules).
+  4. v1 targets a small team / solo operator, self-hosted; multi-tenant SaaS is
+  a v2 concern.
+  5. The spec describes the whole platform; the build will land it in thin
+  vertical slices, not big-bang.
+
+  The four questions whose answers actually change the spec:
+────────────────────────────────────────────────────────────────────────────────←  [×] Stack  [×] Telephony  [×] Verticals  [ ] Deploy  √ Submit  →
+
+  Assumptions I'm making — correct me if any are wrong:
+  1. OpenAI Realtime API is the only voice provider (no Anthropic/Google
+  fallback).
+  2. WebRTC is for browser, WebSocket is for telephony — not interchangeable.
+  3. The four verticals (real-estate, HVAC, founder, telehealth) are
+  configurations on the shared platform, not separate apps — each one ships as a
+   package of (tools + prompts + guardrail policies + approval rules).
+  4. v1 targets a small team / solo operator, self-hosted; multi-tenant SaaS is
+  a v2 concern.
+  5. The spec describes the whole platform; the build will land it in thin
+  vertical slices, not big-bang.
+
+  The four questions whose answers actually change the spec:
+
+● User answered Claude's questions:
+  ⎿  · What backend stack do you want? → Hybrid: Python agent core + Node
+     transport edge                                                                  · Which telephony provider for the phone bridge? → Twilio Media Streams
+     (Recommended)
+     · Which verticals should v1 ship with? → HVAC dispatcher (Recommended)
+     · What deployment posture for v1? → Single-tenant, docker-compose self-host
+      (Recommended)
+
+● Writing SPEC.md now with the choices you locked in: hybrid Python/Node, Twilio
+   Media Streams, HVAC as v1 vertical, docker-compose self-host. The spec
+  describes the full platform with all four verticals as design pressure — only   HVAC is implemented in v1.
+                                                                                ● Write(SPEC.md)
+  ⎿  Wrote 731 lines to SPEC.md
+      1 # Voice Operations Cockpit — Platform Spec                                    2
+      3 **Version:** 0.1 (v1 scope)                                                   4 **Status:** Draft, awaiting confirmation
+      5 **Last updated:** 2026-05-07
+      6
+      7 ---
+      8
+      9 ## 1. Objective
+     … +862 lines (ctrl+o to expand)
+
+● SPEC.md written to the project root. Quick summary of what's in it:
+
+  Sections (1–14):                                                                1. Objective, target users, success criteria — v1 ships with HVAC; other 3
+  verticals are designed-but-deferred.
+  2. Architecture overview — three load-bearing shared things, full component
+  diagram, the hybrid Python/Node split rationale.
+  3. Components — agent core, transport edge, store, ephemeral state,
+  observability spine, frontend.
+  4. Verticals — pack shape + HVAC (built) + the other three (designed).
+  5. Data model — conversations, turns, tool_calls, approvals, trace_events.
+  6. Interfaces & contracts — Agent/Tool Python protocols, edge↔core HTTP+WS
+  protocol, trace event schema.
+  7. Project structure — tree of core/, edge/, frontend/, verticals/, infra/.
+  8. Commands — make dev/test/build/up, plus operator tools.
+  9. Code style — Python (black/ruff/mypy strict), TS (strict, no any at the
+  seam), structured logs, no-comments default.
+  10. Testing strategy — unit / contract / integration / e2e / vertical scenario
+   evals (the load-bearing layer).
+  11. Boundaries — explicit Always / Ask first / Never lists.
+  12. Out of scope for v1.
+  13. Four open questions I want resolved before build.
+  14. Suggested build order (informational, not contract).
+
+  Three things to flag before we proceed:
+
+  - §13 has 4 open questions (voice-intent classifier locality, audio
+  persistence, voice-phrase exactness, frontend hosting). Defaults are
+  recommended but I'd like your call.
+  - HVAC-only in v1 is what you picked; the other verticals are present in the
+  spec to put design pressure on the platform abstractions, not to ship. If you
+  want one or more of them built in v1, say so and I'll widen §1 success
+  criteria + §10 evals.
+  - No build order in the contract — §14 is informational. The spec doesn't lock
+   you into a sequence.
+
+  Confirm the spec looks right (or tell me what to change), and answer the §13
+  questions when you're ready. Once confirmed, the natural next step is
+  agent-skills:planning-and-task-breakdown to turn this into an ordered task
+  list.
+
+✻ Brewed for 4m 27s
+
+> /remote-control                                                                 ⎿  Remote Control connecting…
+                                                                                  /remote-control is active · Code in CLI or at                                   https://claude.ai/code/session_01Q6EWqvBMKVbDvS4D31CnsA                                                                                                       ──────────────────────────────────────────────────────────────────── realtime ──>                                                                               ────────────────────────────────────────────────────────────────────────────────  | Opus 4.7 (1M context) | gpt-realtime-2_openai | ctx 9% | 5h 13% | 7d 12% |    ⏵⏵ bypass permissions on (shift+tab to cycle)                                                                                          Remote Control active                                                                                                                                                                  
+
+
+
+
+
+
+
+

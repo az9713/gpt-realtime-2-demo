@@ -1,0 +1,115 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cockpit-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cockpit}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cockpit-dev-pw}
+      POSTGRES_DB: ${POSTGRES_DB:-cockpit}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cockpit} -d ${POSTGRES_DB:-cockpit}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: cockpit-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  core:
+    build:
+      context: ./core
+      dockerfile: Dockerfile
+    container_name: cockpit-core
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-cockpit}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cockpit-dev-pw}
+      POSTGRES_DB: ${POSTGRES_DB:-cockpit}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_REALTIME_MODEL: ${OPENAI_REALTIME_MODEL:-gpt-realtime-2}
+      OPENAI_TRANSLATE_MODEL: ${OPENAI_TRANSLATE_MODEL:-gpt-realtime-translate}
+      OPENAI_VOICE: ${OPENAI_VOICE:-alloy}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DEFAULT_VERTICAL: ${DEFAULT_VERTICAL:-hvac}
+      TRACE_BATCH_SIZE: ${TRACE_BATCH_SIZE:-50}
+      TRACE_BATCH_INTERVAL_MS: ${TRACE_BATCH_INTERVAL_MS:-500}
+      CORE_PORT: ${CORE_PORT:-8000}
+    ports:
+      - "${CORE_PORT:-8000}:8000"
+    volumes:
+      - ./core:/app
+      - ./verticals:/verticals:ro
+      - ./data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: ["uvicorn", "cockpit_core.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+  edge:
+    build:
+      context: ./edge
+      dockerfile: Dockerfile
+    container_name: cockpit-edge
+    environment:
+      EDGE_PORT: ${EDGE_PORT:-8080}
+      CORE_HTTP_URL: http://core:8000
+      CORE_WS_URL: ws://core:8000
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_REALTIME_MODEL: ${OPENAI_REALTIME_MODEL:-gpt-realtime-2}
+      OPENAI_TRANSLATE_MODEL: ${OPENAI_TRANSLATE_MODEL:-gpt-realtime-translate}
+      OPENAI_VOICE: ${OPENAI_VOICE:-alloy}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+      PHONE_VERTICAL_MAP: ${PHONE_VERTICAL_MAP}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${EDGE_PORT:-8080}:8080"
+    volumes:
+      - ./edge:/app
+      - /app/node_modules
+    depends_on:
+      - core
+    command: ["npm", "run", "dev"]
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cockpit-frontend
+    environment:
+      # VITE_EDGE_URL is exposed to the browser bundle; from the user's
+      # browser the edge is reached on the host-published port.
+      VITE_EDGE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+      # VITE_CORE_URL is read by Vite at server time for the /v1 proxy;
+      # inside the docker network the core is reached by service name.
+      VITE_CORE_URL: http://core:8000
+      VITE_OPERATOR_USER: ${COCKPIT_OPERATOR_USER:-operator}
+      VITE_OPERATOR_PASSWORD: ${COCKPIT_OPERATOR_PASSWORD:-change-me}
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+volumes:
+  postgres-data:

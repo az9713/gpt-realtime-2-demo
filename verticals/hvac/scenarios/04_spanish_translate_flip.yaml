@@ -1,0 +1,20 @@
+id: spanish_translate_flip
+description: |
+  Spanish-speaking caller is detected; the session flips to translate
+  mode within the first few seconds and stays there.
+vertical: hvac
+surface: phone
+language: es
+
+user_inputs:
+  - "Hola, necesito agendar un servicio."
+
+actions:
+  - kind: language
+    language: es
+  - kind: mode
+    mode: translate
+
+expected_tool_calls: []
+expected_approvals: []
+expected_mode: translate

@@ -1,0 +1,24 @@
+id: parts_lookup_basic
+description: |
+  Caller asks for a 440V capacitor; Aria invokes parts_lookup, no approval.
+vertical: hvac
+surface: phone
+language: en
+
+user_inputs:
+  - "Hi, do you have a 440 volt capacitor for a Carrier 58STA?"
+
+actions:
+  - kind: tool
+    name: parts_lookup
+    args:
+      model_number: Carrier-58STA
+      part_description: capacitor
+
+expected_tool_calls:
+  - name: parts_lookup
+    args_contains:
+      part_description: capacitor
+
+expected_approvals: []
+expected_no_pii: true

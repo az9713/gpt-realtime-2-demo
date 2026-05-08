@@ -1,0 +1,40 @@
+id: multi_tool_parallel
+description: |
+  Caller asks a multi-part question that resolves into three parallel
+  tool calls in a single agent reply: parts lookup, warranty check,
+  schedule view.
+vertical: hvac
+surface: browser
+language: en
+
+user_inputs:
+  - "I have a Lennox unit serial U-LENN-993301 with a bad capacitor.
+     Is it still under warranty? Can you check tomorrow's schedule?"
+
+actions:
+  - kind: tool
+    name: parts_lookup
+    args:
+      model_number: Lennox-XR15
+      part_description: capacitor
+  - kind: tool
+    name: warranty_check
+    args:
+      unit_serial: U-LENN-993301
+  - kind: tool
+    name: schedule_lookup
+    args:
+      start: "2026-05-08"
+      end: "2026-05-08"
+
+expected_tool_calls:
+  - name: parts_lookup
+    args_contains:
+      part_description: capacitor
+  - name: warranty_check
+    args_contains:
+      unit_serial: U-LENN-993301
+  - name: schedule_lookup
+    args_contains: {}
+
+expected_approvals: []

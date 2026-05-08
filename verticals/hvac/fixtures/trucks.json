@@ -1,0 +1,66 @@
+[
+  {"id": "T-101", "tech_id": "tech-aldo", "name": "Aldo's truck",
+    "stock": [
+      {"part_number": "P-CAP-440-A", "qty": 4},
+      {"part_number": "P-CONT-24V", "qty": 6},
+      {"part_number": "P-FILT-20x25", "qty": 12},
+      {"part_number": "P-IGN-HSI", "qty": 3},
+      {"part_number": "P-FLAME-SR", "qty": 4}
+    ]},
+  {"id": "T-102", "tech_id": "tech-bea", "name": "Bea's truck",
+    "stock": [
+      {"part_number": "P-CAP-440-B", "qty": 2},
+      {"part_number": "P-FAN-1/3-208", "qty": 1},
+      {"part_number": "P-RELAY-FAN", "qty": 5},
+      {"part_number": "P-FREON-R410A-25", "qty": 1}
+    ]},
+  {"id": "T-103", "tech_id": "tech-carlos", "name": "Carlos' truck",
+    "stock": [
+      {"part_number": "P-COIL-3T", "qty": 1},
+      {"part_number": "P-PUMP-COND", "qty": 1},
+      {"part_number": "P-FLOAT-SS2", "qty": 4},
+      {"part_number": "P-FILT-16x20", "qty": 8}
+    ]},
+  {"id": "T-104", "tech_id": "tech-deb", "name": "Deb's truck",
+    "stock": [
+      {"part_number": "P-CAP-440-A", "qty": 3},
+      {"part_number": "P-THERM-T6", "qty": 2},
+      {"part_number": "P-PANEL-CONT", "qty": 1}
+    ]},
+  {"id": "T-105", "tech_id": null, "name": "Spare truck",
+    "stock": []},
+  {"id": "T-106", "tech_id": "tech-evan", "name": "Evan's truck",
+    "stock": [
+      {"part_number": "P-DUCT-FLEX-8", "qty": 2},
+      {"part_number": "P-DUCT-FLEX-10", "qty": 1},
+      {"part_number": "P-PLENUM-FB", "qty": 1}
+    ]},
+  {"id": "T-107", "tech_id": "tech-fran", "name": "Fran's truck",
+    "stock": [
+      {"part_number": "P-CONT-24V", "qty": 4},
+      {"part_number": "P-PRES-SW-HI", "qty": 2},
+      {"part_number": "P-PRES-SW-LO", "qty": 2}
+    ]},
+  {"id": "T-108", "tech_id": "tech-gary", "name": "Gary's truck",
+    "stock": [
+      {"part_number": "P-CAP-440-B", "qty": 5},
+      {"part_number": "P-FILT-20x25", "qty": 14}
+    ]},
+  {"id": "T-109", "tech_id": "tech-hana", "name": "Hana's truck",
+    "stock": [
+      {"part_number": "P-COIL-3T", "qty": 1},
+      {"part_number": "P-DRIER-3T", "qty": 4}
+    ]},
+  {"id": "T-110", "tech_id": "tech-iggy", "name": "Iggy's truck",
+    "stock": [
+      {"part_number": "P-THERM-T9", "qty": 2},
+      {"part_number": "P-CLEAN-COIL", "qty": 4}
+    ]},
+  {"id": "T-111", "tech_id": "tech-jules", "name": "Jules' truck",
+    "stock": [
+      {"part_number": "P-RELAY-FAN", "qty": 4},
+      {"part_number": "P-FILT-16x20", "qty": 6}
+    ]},
+  {"id": "T-112", "tech_id": null, "name": "Loaner",
+    "stock": []}
+]

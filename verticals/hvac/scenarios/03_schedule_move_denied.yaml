@@ -1,0 +1,25 @@
+id: schedule_move_denied
+description: |
+  Customer asks to move job J-5002 to a slot that conflicts; the
+  dispatcher denies. The mutation must NOT happen.
+vertical: hvac
+surface: phone
+language: en
+
+user_inputs:
+  - "Move my Wednesday job to Tuesday at 8am please."
+  - dispatcher_action: "deny"
+
+actions:
+  - kind: tool
+    name: schedule_move
+    args:
+      job_id: J-5002
+      new_slot: "2026-05-07T08:00:00Z"
+
+expected_tool_calls: []  # nothing should execute when denied
+
+expected_approvals:
+  - tool: schedule_move
+    decision: denied
+    via: cockpit

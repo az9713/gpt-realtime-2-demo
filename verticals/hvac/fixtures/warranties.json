@@ -1,0 +1,22 @@
+[
+  {"unit_serial": "U-CARR-552204", "status": "active", "expires": "2029-06-12", "labor_covered": false},
+  {"unit_serial": "U-TRANE-118805", "status": "expired", "expires": "2022-03-22", "labor_covered": false},
+  {"unit_serial": "U-LENN-993301", "status": "active", "expires": "2031-09-04", "labor_covered": true},
+  {"unit_serial": "U-GOOD-770017", "status": "expired", "expires": "2021-08-30", "labor_covered": false},
+  {"unit_serial": "U-CARR-552205", "status": "active", "expires": "2030-04-15", "labor_covered": false},
+  {"unit_serial": "U-TRANE-118806", "status": "active", "expires": "2028-11-09", "labor_covered": false},
+  {"unit_serial": "U-LENN-993302", "status": "expired", "expires": "2020-05-21", "labor_covered": false},
+  {"unit_serial": "U-GOOD-770018", "status": "active", "expires": "2032-02-14", "labor_covered": true},
+  {"unit_serial": "U-CARR-552206", "status": "expired", "expires": "2019-07-08", "labor_covered": false},
+  {"unit_serial": "U-TRANE-118807", "status": "active", "expires": "2029-12-01", "labor_covered": false},
+  {"unit_serial": "U-LENN-993303", "status": "active", "expires": "2033-04-19", "labor_covered": true},
+  {"unit_serial": "U-GOOD-770019", "status": "expired", "expires": "2022-10-25", "labor_covered": false},
+  {"unit_serial": "U-CARR-552207", "status": "active", "expires": "2030-08-13", "labor_covered": false},
+  {"unit_serial": "U-TRANE-118808", "status": "expired", "expires": "2021-01-29", "labor_covered": false},
+  {"unit_serial": "U-LENN-993304", "status": "active", "expires": "2032-12-09", "labor_covered": true},
+  {"unit_serial": "U-GOOD-770020", "status": "expired", "expires": "2018-04-04", "labor_covered": false},
+  {"unit_serial": "U-CARR-552208", "status": "active", "expires": "2031-06-02", "labor_covered": false},
+  {"unit_serial": "U-TRANE-118809", "status": "active", "expires": "2028-03-17", "labor_covered": false},
+  {"unit_serial": "U-LENN-993305", "status": "expired", "expires": "2019-09-23", "labor_covered": false},
+  {"unit_serial": "U-GOOD-770021", "status": "active", "expires": "2029-02-28", "labor_covered": false}
+]

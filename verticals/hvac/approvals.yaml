@@ -1,0 +1,13 @@
+tools:
+  schedule_move:
+    phrase: "Reggie, do it"
+    timeout_seconds: 60
+    explanation: |
+      Moving a job to a different time slot affects customer expectations.
+      The dispatcher must confirm by saying the phrase exactly.
+
+  dispatch_truck:
+    phrase: "Reggie, send the truck"
+    timeout_seconds: 60
+    explanation: |
+      Dispatching commits a tech to a job. Confirm before rolling.

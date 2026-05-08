@@ -1,0 +1,48 @@
+Transcript
+We’re introducing three audio models in the API that unlock a new class of voice apps for developers. With these models, developers can build voice experiences that feel more natural, respond more intelligently, and take action in real time:
+
+• GPT‑Realtime‑2, our first voice model with GPT‑5‑class reasoning that can handle harder requests and carry the conversation forward naturally.
+• GPT‑Realtime‑Translate, a new live translation model that translates speech from 70+ input languages into 13 output languages while keeping pace with the speaker.
+• GPT‑Realtime‑Whisper, a new streaming speech-to-text that transcribes speech live as the speaker talks.
+
+https://www.youtube.com/watch?v=JOu8v6CBjkE
+Search transcript
+Search transcript
+0:00Hey everyone, we're introducing new real-time audio models in the OpenAI API. In this demo, I'll show two of
+0:077 secondsthem. GPT Realtime Translate for live translations and GPT Realtime 2 for voice agents that can follow instruction
+0:1515 secondsand take actions. Let's start with translations cuz that one feels so magical. I speak French, but say I need to present to an audience around the
+0:2222 secondsworld. The English you'll hear is the model's live audio output captured directly from this laptop with transcriptions. Now, as I start speaking
+0:3131 secondsin French, we'll lower the volume of my mic and increase the one from the model so you can have a real feel for it. No edit to the audio. Let's give it a try.
+0:4444 secondsWhat's really impressive is that the model can listen to me and translate while I'm speaking. It waits for the key word like the verb.
+0:5252 secondsstart translating right away and the result is a much more natural conversation just like a dialogue between two people.
+1:001 minuteI can even interrupt in German and the model switches effortlessly between my German and your French and we
+1:081 minute, 8 secondscan even include technical terms like GPT real time open AI or computer use and the model has no trouble handling that.
+1:181 minute, 18 secondsIsn't that amazing? The model can translate across 70 different languages in real time, really following the shape
+1:251 minute, 25 secondsof every sentence. So whether you're building a media platform or tools for customer support or education, we believe that this can help you break
+1:331 minute, 33 secondsdown the language barriers. And this model is just one of the ways we're improving voice intelligence. So for the
+1:401 minute, 40 secondsnext demo, let's talk about GPT Realtime 2, our new model that brings intelligent reasoning to voice agents. So, let's
+1:481 minute, 48 secondsbring up my phone and take a look at my personal voice assistant. Hi there. Hi again. What's up?
+1:561 minute, 56 secondsYeah, I have uh a customer meeting coming up. Can you take a look at my calendar?
+2:002 minutesYou have a meeting with Sable Crust Robotics in 12 minutes. And you're meeting with Alex Kim, their CTO.
+2:072 minutes, 7 secondsGreat. Thank you. Oh, please stay quiet for a second until I say back to demo.
+2:102 minutes, 10 secondsRamon, don't forget now that these models have things like reasoning and parallel tool calling, it's even more important to use things like preamles.
+2:172 minutes, 17 secondsThis way, the model can explain itself and update the user. Thank you, Jason, for the great reminder. Very important.
+2:232 minutes, 23 secondsActions can of course take a few seconds and so it's very important for the model to acknowledge those. With GPT realtime 2, you can communicate directly during
+2:322 minutes, 32 secondsthe reasoning and the tool calling so the user stays informed. And by the way,
+2:362 minutes, 36 secondswhat makes voice agent so natural now is that they stay in the conversation.
+2:402 minutes, 40 secondsJason and I have been chatting. Uh the model has been listening and it's still listening now but not interrupting us until I say back to demo.
+2:502 minutes, 50 secondsI'm here when you're ready to continue the demo.
+2:522 minutes, 52 secondsPretty cool, right? So now let's highlight what Jason just mentioned with preamble. Let's ask another task and say
+2:592 minutes, 59 secondshey could you uh now uh update the CRM and um put the meeting of today as a brief and the next steps.
+3:073 minutes, 7 secondsLet me pull the latest context and update your CRM. Sablerest launched warehouse automation this morning.
+3:143 minutes, 14 secondsExpansion is active. Security review is the blocker.
+3:183 minutes, 18 secondsAll right. Thank you. I'm all set. Uh please take quiet again as I wrap this up. What's exciting here is that you can now connect the model to any kind of
+3:263 minutes, 26 secondssystem. It could be your dashboards, the services you're using, even connected devices, and so much more. So, that was a quick preview of our new real-time audio model coming to the OpenAI API.
+3:383 minutes, 38 secondsYou can now create agents that keep conversation going as they think in the background. They can translate live across 70 languages. They can preserve
+3:463 minutes, 46 secondscontext and they can even act inside the products you're already using. Voice can truly become the primary interface now and we can't wait to see what you build
+3:543 minutes, 54 secondswith these new models. Thanks for watching. Hey, back to demo. How was that?
+3:593 minutes, 59 secondsSmooth and clear. It felt natural and demo friendly.
+
+3:17
+
+Translating Claude’s thoughts into langu

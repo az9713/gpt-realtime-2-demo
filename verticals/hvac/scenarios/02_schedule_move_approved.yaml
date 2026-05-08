@@ -1,0 +1,35 @@
+id: schedule_move_approved
+description: |
+  Customer asks to move job J-5001 to tomorrow morning; Aria stages a
+  schedule_move; Reggie approves with the configured phrase.
+vertical: hvac
+surface: phone
+language: en
+
+user_inputs:
+  - "Can you move my appointment tomorrow at nine to ten?"
+  - dispatcher_phrase: "Reggie, do it"
+
+actions:
+  - kind: tool
+    name: schedule_lookup
+    args:
+      start: "2026-05-08"
+      end: "2026-05-08"
+  - kind: tool
+    name: schedule_move
+    args:
+      job_id: J-5001
+      new_slot: "2026-05-08T10:00:00Z"
+
+expected_tool_calls:
+  - name: schedule_lookup
+    args_contains: {}
+  - name: schedule_move
+    args_contains:
+      job_id: J-5001
+
+expected_approvals:
+  - tool: schedule_move
+    decision: approved
+    via: voice

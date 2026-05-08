@@ -1,0 +1,8 @@
+preambles:
+  parts_lookup: "Let me pull up that part."
+  truck_inventory: "Checking what's on the truck."
+  warranty_check: "Let me look up the warranty."
+  schedule_lookup: "Pulling up the schedule."
+  customer_lookup: "Looking up the account."
+  schedule_move: "Reggie, do it"
+  dispatch_truck: "Reggie, send the truck"
