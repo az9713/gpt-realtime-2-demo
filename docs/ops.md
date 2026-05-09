@@ -180,3 +180,87 @@ that won't capture `/voicemails`, e.g. a regex key
 
 The current `vite.config.ts` only proxies `/v1` (to the core); browser
 audio WebSockets connect directly to the edge.
+
+## Vite HMR doesn't pick up edits on Windows + Docker
+
+The frontend container bind-mounts `./frontend` from the host. On
+Windows + Docker Desktop, host filesystem inotify events do **not**
+propagate into the WSL2-backed container, so Vite's chokidar file
+watcher never fires. The file on disk is updated; the container sees
+the new mtime; but Vite keeps serving the *cached module* it loaded at
+boot.
+
+**Symptom.** You edit `frontend/src/...`, hard-reload the cockpit,
+and the browser is still running the old code. `docker compose exec
+frontend stat /app/src/...` shows the new mtime; `fetch('/src/...')`
+from the browser console returns the *old* contents.
+
+**Fix.**
+
+```bash
+docker compose restart frontend
+```
+
+This forces Vite to re-read modules from disk on next request. After
+restart, any subsequent reload picks up the new bundle.
+
+**Verifying the running browser actually loaded the new code:**
+
+```js
+// in DevTools console
+fetch('/src/cockpit/TalkPage.tsx?t=' + Date.now())
+  .then(r => r.text())
+  .then(t => /<token-from-the-edit>/.test(t));
+```
+
+A `true` confirms the patched module is what the browser is executing.
+
+The proper long-term fix is to enable polling in
+`vite.config.ts` (`server.watch.usePolling: true`), at the cost of a
+constant 1–2% CPU. v1 keeps polling off and treats the
+`docker compose restart frontend` as a one-line operator step.
+
+## Agent "cannot stop talking" / self-looping
+
+A realtime-2 session that keeps generating responses for a single user
+turn, or audio that continues to play for several seconds after the
+user clicks **Stop**.
+
+**Symptoms:**
+
+- The Conversations trace shows a single `USER` turn followed by many
+  near-identical `AGENT` turns 1–2 s apart (e.g. *"What day or date
+  range works best for you?"* repeating).
+- `docker compose logs edge --tail=100` shows recurring
+  `input_audio_buffer.commit_empty` and
+  `conversation_already_has_active_response` errors at ~1 Hz cadence.
+- Audio bleeds for multiple seconds after the user clicks **Stop**.
+
+**Resolution.** Three independent failure modes can each cause this;
+all are fixed in `frontend/src/cockpit/TalkPage.tsx` and the edge log
+errors should be absent post-fix. If you see the symptoms again,
+verify the running bundle is the patched code (see Vite HMR section
+above), then check:
+
+1. *Manual `audio.commit` timer.* The frontend must **not** push
+   `input_audio_buffer.commit` on a timer. Server-side `semantic_vad`
+   already auto-commits and auto-creates responses; a client-side
+   timer races with VAD and double-fires `response.create`. Grep for
+   `setInterval` in `TalkPage.tsx` — there should be none in the
+   audio path.
+2. *Playback `AudioContext` not torn down on Stop.* `stop()` must call
+   `closePlayer()` (which closes the playback `AudioContext` and
+   nulls `playbackTimeRef`). Otherwise pre-scheduled
+   `BufferSourceNode.start(playbackTimeRef.current)` calls keep
+   playing for the queued duration.
+3. *Echo-feedback into server VAD.* When speakers + mic share the
+   same laptop, the agent's voice is captured by the mic, sent up as
+   user audio, and `semantic_vad` fires turn-end on it. The
+   `processor.onaudioprocess` handler must half-duplex-gate: while
+   `playbackTimeRef.current > playerCtx.currentTime + 0.05`, drop mic
+   frames instead of forwarding them. (Trade-off: while half-duplexed
+   the user can't barge-in on the agent. Fine for v1.)
+
+**Operator workaround if a session is stuck mid-loop:** click **Stop**
+in the cockpit, then refresh the tab. The next session will use the
+patched code.

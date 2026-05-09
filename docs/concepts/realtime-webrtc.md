@@ -245,9 +245,16 @@ audio: {
 }
 ```
 
-The browser still pushes `input_audio_buffer.commit` periodically as a
-backup — every ~1 s — but the model has full control over when to
-actually run.
+The browser does **not** push manual
+`input_audio_buffer.commit` frames. With `semantic_vad` the model
+auto-commits and auto-creates responses; an extra client-side timer
+races with VAD and double-fires `response.create` while a previous
+response is still generating, which manifests as the agent looping
+the same fragment over and over. (See the "Agent cannot stop talking"
+runbook entry in [`ops.md`](../ops.md) for the postmortem.) The edge
+*does* still accept `audio.commit` messages from clients that opt in
+— the Twilio media-stream path uses one — but the browser cockpit
+doesn't.
 
 ---
 
@@ -269,8 +276,41 @@ which gets you the browser's defaults. Modern Chrome already applies:
 - Automatic gain control.
 
 For a cockpit deployment where the operator wears a headset, that's
-plenty. For a meeting overlay where you need to capture multiple
-people's audio at once, you'd pass richer constraints
+plenty.
+
+### Half-duplex gate as a second line of defense
+
+Browser AEC is imperfect: across two separate `AudioContext`s (one
+for capture, one for playback), and on lossy laptop speakers, enough
+agent audio leaks back into the mic to push `semantic_vad` over its
+turn-end threshold — **without** producing a meaningful user
+transcript. The result is an agent that auto-generates response after
+response on top of empty/echo input.
+
+So `processor.onaudioprocess` in `TalkPage.tsx` has a half-duplex
+gate:
+
+```ts
+processor.onaudioprocess = (event) => {
+  if (ws.readyState !== ws.OPEN) return;
+  // Half-duplex: while agent audio is queued for playback, drop mic frames.
+  const playerCtx = playerCtxRef.current;
+  if (playerCtx && playbackTimeRef.current > playerCtx.currentTime + 0.05) {
+    return;
+  }
+  // ...encode and send the mic frame
+};
+```
+
+While the agent is speaking, mic frames are dropped on the floor. The
+trade-off: the user can't barge-in mid-utterance. For an operator
+console where the dispatcher is mostly listening to the agent and
+acting between turns, that's the right call. Removing the gate
+requires either headphones (no acoustic echo) or proper AEC across
+the two AudioContexts.
+
+For a meeting overlay where you need to capture multiple people's
+audio at once, you'd pass richer constraints
 (`echoCancellation: true, noiseSuppression: true, channelCount: 1`)
 and consider WebRTC's audio processing module directly.
 

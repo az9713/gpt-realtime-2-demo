@@ -128,9 +128,14 @@ left unchecked. The user has not yet formally signed off on the plan.
    (`gpt-realtime-whisper`) shipped: voicemail mode, note-taker mode,
    bilingual capture, audit transcripts + divergence diff, and
    eval-from-real-call synthesis.
-4. ✅ Two real bugs found via testing and fixed:
+4. ✅ Three real bugs found via testing and fixed:
    `fix(whisper)` — wrong endpoint URL (commit `847a382`);
-   `fix(frontend)` — Vite proxy capturing `/voicemails` (commit `6650f51`).
+   `fix(frontend)` — Vite proxy capturing `/voicemails` (commit `6650f51`);
+   `fix(frontend)` — realtime-2 agent self-loop in `TalkPage.tsx`
+   (manual `audio.commit` timer racing with `semantic_vad` +
+   playback `AudioContext` not torn down on Stop + missing
+   half-duplex gate against speaker→mic echo). See
+   `docs/ops.md` "Agent cannot stop talking" runbook entry.
 5. ✅ Comprehensive testing doc + doc set refreshed; `docs/testing.md`
    has the coverage matrix and gaps inventory.
 6. ✅ Final regression sweep passed: 27 edge tests + 61 Python tests +

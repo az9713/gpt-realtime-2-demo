@@ -303,6 +303,8 @@ translate mode, voicemail, note-taker, and audit transcripts. See
   - `gpt-realtime-whisper` at `wss://api.openai.com/v1/realtime?intent=transcription` (live handshake confirmed)
 - ✅ 5 cockpit routes (Talk · Approvals · Voicemails · Audit · Conversations) all return HTTP 200
 - ✅ Browser-driven feature test pass complete — see [`docs/testing.md`](docs/testing.md)
+- ✅ 10-step manual UI click-path test plan documented and re-runnable per change ([`docs/testing.md`](docs/testing.md#manual-ui-click-path-test-10-steps))
+- ✅ Realtime-2 agent self-loop / "cannot stop talking" bug fixed in `frontend/src/cockpit/TalkPage.tsx`: removed the manual `audio.commit` timer that raced with `semantic_vad`, added playback-context teardown on **Stop**, and added a half-duplex gate to prevent speaker→mic echo from re-triggering server VAD ([`docs/ops.md`](docs/ops.md#agent-cannot-stop-talking--self-looping))
 
 For the full test-coverage matrix, gaps inventory, and how to
 reproduce every layer locally, see [`docs/testing.md`](docs/testing.md).

@@ -259,7 +259,7 @@ endpoints — i.e. the full stack end-to-end from the user-facing surface.
 
 ### Bugs found and fixed *during* the test session
 
-The browser test pass surfaced two real issues, both fixed and re-verified:
+The browser test passes surfaced three real issues, all fixed and re-verified:
 
 1. **Whisper endpoint mismatch** (`fix(whisper)` at `847a382`) —
    discovered in edge logs as
@@ -272,6 +272,33 @@ The browser test pass surfaced two real issues, both fixed and re-verified:
    `/voicemails`) to the edge, which has no such route. Returned
    HTTP 500. Removed the proxy entry (it was dead code — the browser
    already connects to the edge directly via `VITE_EDGE_URL`).
+3. **Agent self-loop / "cannot stop talking"** (`fix(frontend)`,
+   `frontend/src/cockpit/TalkPage.tsx`) — surfaced as the agent
+   repeating the same clarifying question many times for a single
+   user turn, and audio continuing to play for several seconds after
+   **Stop**. Edge logs showed ~50
+   `input_audio_buffer.commit_empty` and
+   `conversation_already_has_active_response` errors per session.
+   Three compounding causes, all fixed:
+    - `setInterval(() => ws.send({kind:'audio.commit'}), 1000)` was
+      racing with server-side `semantic_vad`, double-firing
+      `response.create` while a response was still generating. The
+      timer was a leftover from a pre-`semantic_vad` design and is
+      now removed entirely — VAD is fully server-side.
+    - `stop()` closed the WebSocket and the mic but never closed the
+      playback `AudioContext`, so audio frames already scheduled via
+      `BufferSourceNode.start(playbackTimeRef.current)` kept playing
+      out for the queued duration. `stop()` now calls `closePlayer()`
+      which closes the AudioContext and drops queued frames.
+    - With speakers + mic on the same laptop, the agent's voice fed
+      back into the mic and triggered server VAD into a response
+      loop. `processor.onaudioprocess` now half-duplex-gates: while
+      `playbackTimeRef.current > playerCtx.currentTime + 0.05`, mic
+      frames are dropped instead of forwarded.
+
+   Verified: post-fix sessions show zero `commit_empty` /
+   `active_response` errors in the edge log; **Stop** kills audio
+   within ~50 ms.
 
 ### What this catches
 
@@ -291,6 +318,97 @@ The browser test pass surfaced two real issues, both fixed and re-verified:
 - Twilio inbound calls. To test those end-to-end we'd need a real
   Twilio number, a tunnel, and a real phone dial. Not done in this
   test pass.
+
+### Manual UI click-path test (10 steps)
+
+The following walk-through is the canonical hand-test for any UI
+change. Each step is independent; skip ones that don't apply to the
+change under test. Pre-condition: stack up
+(`docker compose up -d && make migrate && make seed-hvac` on first
+run), `curl -s http://localhost:8000/healthz` and
+`curl -s http://localhost:8080/healthz` both return `ok`.
+
+**1. Log in.** Open `http://localhost:5173`. Sign in as
+`operator` / `change-me`. Expect: 5 nav tabs (Talk · Approvals ·
+Voicemails · Audit · Conversations); Talk highlighted.
+
+**2. Nav smoke.** Click each tab in order. Expect no blank or 500
+pages; Approvals shows "No pending approvals.", Voicemails "No
+voicemails yet.", Audit "No divergences yet.", Conversations a table
+with columns Started · Vertical · Surface · Mode · Cost · Ended.
+
+**3. Note-taker mode.** On the Talk page click **Notes only**, allow
+mic. Expect: button turns red **Stop**, mode badge **NOTES ONLY**,
+no Aria voice. Speak one sentence, click **Stop**. Conversations tab:
+newest row should show Mode = `notetaker`, Surface = `browser`. Open
+that row's trace — expect `session.start` and `session.end` events.
+
+**4. Talk button + agent loop regression.** Click green **Talk**,
+allow mic. Mode badge **REALTIME-2**. Say:
+*"Do you have a 440 volt capacitor for a Carrier 58STA?"* Expect
+within ~2 s: one USER card, one AGENT card, Aria speaks the reply
+once. Wait ~5 s in silence — Aria must **not** repeat herself or
+keep talking (this is the regression net for the
+manual-commit / echo-feedback fix). Click **Stop**. Audio should cut
+within ~50 ms. Then `docker compose logs edge --tail=80` must contain
+zero `input_audio_buffer.commit_empty` or
+`conversation_already_has_active_response` errors for that
+conversation id.
+
+**5. Approval flow.** Click **Talk**, allow mic. Say: *"Move job
+J-5001 to ten o'clock tomorrow."* Aria asks for approval and pauses.
+In a second tab open Approvals → see pending `schedule_move` card
+with `args: { job_id: "J-5001" }`. Click **Approve** (or speak
+*"Reggie, do it"* in the Talk tab). Aria continues with confirmation;
+Approvals tab is empty again. Click **Stop**.
+
+**6. Translate auto-flip.** Click **Talk**, allow mic. Say:
+*"Hola, necesito agendar un servicio."* Within ~3 s the mode badge
+flips **REALTIME-2 → TRANSLATE** and Aria replies in Spanish. Click
+**Switch to Realtime** to flip back. Click **Stop**. The trace pane
+for that conversation should show a `mode.switch` event with
+`mode: translate`.
+
+**7. Voicemail predicate.** F12 → Console → run:
+```js
+fetch('/v1/verticals/hvac/business-status').then(r => r.json()).then(console.log)
+```
+Expect:
+`{ vertical: "hvac", open: true|false, supports_voicemail: true,
+voicemail_greeting: "…", business_hours: {…} }`. (A live voicemail
+TwiML test requires `make tunnel` + a real Twilio number.)
+
+**8. Conversation list + trace explorer.** Click **Conversations**.
+Expect a table with all the conversations from the steps above —
+Mode column should show all 3 values exercised (realtime2, translate,
+notetaker). Click any row's timestamp. Expect a two-pane view: trace
+waterfall (left, color-coded by kind) and turns transcript (right,
+with `latency_ms` annotations on agent turns).
+
+**9. Audit divergences.** Click **Audit**. Expect "No divergences
+yet." (HVAC has `audit_transcripts: false` by default; this is the
+correct passing state.) For non-empty data: set
+`audit_transcripts: true` in `verticals/hvac/pack.yaml`, restart core,
+run a session, then `make audit`.
+
+**10. Sign out.** Top-right **Sign out** → returns to login card.
+Clicking nav tabs after sign-out should stay on the login (the
+AuthGate intercepts routing).
+
+**Pass criteria summary:**
+
+- All 5 nav tabs render (no 500s, no blank pages)
+- Talk + Notes only buttons both visible; Notes-only tooltip reads
+  *"Silent transcription only — no agent persona, no tools"*
+- Talk starts a realtime-2 session with audio in both directions
+- Notes only starts a whisper-only session with no audio out
+- Spanish input auto-flips to translate within ~3 s
+- Dangerous tool call (`schedule_move`) blocks until approval is
+  resolved
+- Conversations list shows all 3+ modes
+- Trace explorer renders the colored event waterfall
+- **Stop kills audio within ~50 ms; no agent self-loop**
+- Sign out returns to login
 
 ---
 
