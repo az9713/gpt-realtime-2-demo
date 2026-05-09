@@ -1,0 +1,22 @@
+id: notetaker_session
+description: |
+  Dispatcher uses note-taker mode to capture a direct conversation with
+  a customer (no Aria). Whisper silently transcribes; no agent reasoning,
+  no tools, no approvals. The post-call hook emits a transcript-only
+  summary.
+vertical: hvac
+surface: browser
+language: en
+
+user_inputs:
+  - "Reggie: hi Maria, what's going on with the AC?"
+  - "Maria: it's blowing warm air."
+
+actions:
+  - kind: mode
+    mode: notetaker
+
+expected_tool_calls: []
+expected_approvals: []
+expected_mode: notetaker
+expected_no_pii: true

@@ -1,8 +1,15 @@
 # Project Context — Voice Operations Cockpit
 
 This file is the cold-start brief for any new Claude Code session.
-Read this first, then `SPEC.md`, then `PLAN.md`. No code has been
-written yet; we are at the end of design and the start of build.
+Read this first, then `README.md`, then `SPEC.md`/`PLAN.md` for
+historical context.
+
+**Status as of the latest commit:** the platform is fully built,
+tested, and documented. All 9 build phases (41 tasks) plus 6
+follow-on whisper-feature phases have shipped. Three GA Realtime
+models (`gpt-realtime-2`, `gpt-realtime-translate`,
+`gpt-realtime-whisper`) are in active use. The repo runs cleanly
+with `make up && make migrate && make seed-hvac`.
 
 ---
 
@@ -51,8 +58,12 @@ gpt-realtime-2_openai/
     └── gpt-realtime-2-docs.txt  ← link list to OpenAI guides
 ```
 
-**No code has been written.** No `core/`, `edge/`, `frontend/`,
-`verticals/`, no docker-compose, no migrations.
+**Everything is built.** `core/` (Python/FastAPI), `edge/`
+(Node/Fastify), `frontend/` (React/Vite), `verticals/hvac/`,
+`docker-compose.yml`, three alembic migrations (head:
+`0003_audit_divergences`), and 21+ doc files under `docs/` are all
+in place. See `README.md` for the feature inventory and
+`docs/index.md` for the doc map.
 
 ---
 
@@ -112,19 +123,43 @@ left unchecked. The user has not yet formally signed off on the plan.
 ## Where we are right now
 
 1. ✅ Spec written and confirmed (`SPEC.md` v0.1).
-2. ✅ Plan written (`PLAN.md` v0.1).
-3. ⬜ Plan awaiting final human approval.
-4. ⬜ Implementation has not started. No code exists.
+2. ✅ Plan written (`PLAN.md` v0.1) — 9 phases, 41 tasks, all complete.
+3. ✅ Six follow-on phases for the third GA Realtime model
+   (`gpt-realtime-whisper`) shipped: voicemail mode, note-taker mode,
+   bilingual capture, audit transcripts + divergence diff, and
+   eval-from-real-call synthesis.
+4. ✅ Two real bugs found via testing and fixed:
+   `fix(whisper)` — wrong endpoint URL (commit `847a382`);
+   `fix(frontend)` — Vite proxy capturing `/voicemails` (commit `6650f51`).
+5. ✅ Comprehensive testing doc + doc set refreshed; `docs/testing.md`
+   has the coverage matrix and gaps inventory.
+6. ✅ Final regression sweep passed: 27 edge tests + 61 Python tests +
+   ruff/tsc clean + alembic head + 3 live OpenAI handshakes + 5
+   cockpit routes + 3 WebSocket modes + 2 operator scripts.
 
-**Next decision point** — once the user approves the plan, choose
-between:
+**Repo is in a known-good state.** Public at
+https://github.com/az9713/gpt-realtime-2-demo.
 
-- `agent-skills:incremental-implementation` — one task at a time,
-  human reviews each.
-- `superpowers:execute-plan` — batched execution with review
-  checkpoints between phases.
+### Most useful commands for a fresh session
 
-The user has not yet picked between these.
+```bash
+# bring up the stack (5 containers)
+make up && make migrate && make seed-hvac
+
+# run all tests
+make test                    # core + edge
+make test-eval               # 8 HVAC scenarios
+
+# operator scripts
+make synthesize-eval CONV=<uuid>
+make audit
+```
+
+### Where to read first when something breaks
+
+- `docs/ops.md` — recovery procedures + the docker-compose
+  recreate-vs-restart and Vite proxy gotchas.
+- `docs/testing.md` — what's covered, what isn't, how to reproduce.
 
 ---
 

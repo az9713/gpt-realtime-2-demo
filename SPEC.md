@@ -143,14 +143,24 @@ three concerns are shared across every surface and every vertical:
 
 ### Modes
 
-- **Conversational (Realtime-2):** the default. Reasoning, tool calls,
-  preambles, parallel actions.
-- **Translate (Realtime-Translate):** mode toggle on a session. The agent
-  becomes a passthrough translator; tools and orchestration are bypassed
-  while the mode is active.
+The four supported session modes (post-Phase-1 widening):
 
-Modes are per-session and switchable mid-session by an operator command
-or by a vertical-defined trigger.
+- **`realtime2`** — the conversational default, powered by
+  `gpt-realtime-2`. Reasoning, tool calls, preambles, parallel
+  actions.
+- **`translate`** — mode toggle on an active session, powered by
+  `gpt-realtime-translate`. Passthrough translation; tools and
+  orchestration are bypassed.
+- **`voicemail`** — start-time-only mode for inbound calls outside
+  a vertical's `business_hours`. Powered by `gpt-realtime-whisper`
+  in solo mode (no agent persona, no tools).
+- **`notetaker`** — start-time-only mode for dispatcher-initiated
+  silent transcription. Powered by `gpt-realtime-whisper` in solo
+  mode.
+
+Mid-session swaps are allowed only between `realtime2` and
+`translate`. The other two are start-time only and are gated at the
+`ModeSwitchBody.mode` Pydantic literal in `core/api/sessions.py`.
 
 ---
 
@@ -307,6 +317,8 @@ conversations (
   vertical        text          not null
   surface         text          not null  -- 'browser' | 'phone'
   mode            text          not null  -- 'realtime2' | 'translate'
+                                           --   | 'voicemail' | 'notetaker'
+                                           --   (CHECK widened by migration 0002)
   language        text          null      -- BCP-47, set after detect
   customer_ref    jsonb         null      -- vertical-defined
   agent_persona   text          null
@@ -359,6 +371,21 @@ trace_events (
   kind            text          not null  -- 'turn.start' | 'tool.requested' | 'guardrail.fired' | …
   payload_json    jsonb         not null
   cost_usd        numeric(10,6) not null default 0
+)
+
+-- Added by migration 0003 (Phase 5 — audit transcripts).
+-- Populated by the `make audit` runner for verticals with
+-- `audit_transcripts: true`.
+audit_divergences (
+  id                 uuid          pk
+  conversation_id    uuid          fk
+  agent_turn_id      uuid          null    -- nullable when the agent missed an utterance
+  canonical_turn_id  uuid          null    -- nullable when the agent imagined an utterance
+  kind               text          not null -- 'paraphrase' | 'omission' | 'addition' | 'mismatch'
+  score              numeric(5,4)  not null -- token-level WER, normalized
+  agent_text         text          null
+  canonical_text     text          null
+  flagged_at         timestamptz   not null default now()
 )
 ```
 
@@ -711,6 +738,26 @@ contract; revisiting them requires updating this section.
 4. **Frontend hosting:** **separate container**. The cockpit UI ships
    as its own service (nginx serving built Vite assets) so frontend
    asset traffic does not compete with the audio edge.
+5. **Whisper endpoint** *(Phase 1+ addendum)*: streaming transcription
+   uses OpenAI's dedicated `wss://api.openai.com/v1/realtime?intent=transcription`
+   URL, not the conversational `?model=` URL family. Model id flows
+   in the session.update payload at
+   `audio.input.transcription.model`. The cockpit's
+   `TranscriptionSession` class encapsulates this; the URL is
+   contract-pinned in `edge/tests/transcription.test.ts`.
+6. **Mode mid-session switching** *(Phase 3+ addendum)*: only
+   `realtime2 ↔ translate` flips are permitted at runtime. `voicemail`
+   and `notetaker` are start-time-only modes (gate enforced by the
+   `ModeSwitchBody.mode` Pydantic literal).
+7. **Audit transcripts opt-in** *(Phase 5+ addendum)*: per-vertical
+   `audit_transcripts: true` flag in `pack.yaml`. When set, a
+   `gpt-realtime-whisper` sidecar runs always-on alongside the
+   primary session, enabling the divergence-diff pipeline. Default
+   off; HVAC stays off.
+8. **Eval generation source** *(Phase 6+ addendum)*: v1 reads
+   transcripts from `app.turns` (no live whisper, no audio replay),
+   honoring §13.2's no-audio-storage decision. v1.5 may accept a
+   stored audio file and re-transcribe with whisper.
 
 ---
 

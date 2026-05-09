@@ -25,7 +25,8 @@
       "Bash(curl -s \"http://localhost:8000/v1/conversations?limit=5&mode=voicemail\")",
       "Bash(curl -s \"http://localhost:5173/v1/audits/divergences\")",
       "WebFetch(domain:developers.openai.com)",
-      "WebFetch(domain:platform.openai.com)"
+      "WebFetch(domain:platform.openai.com)",
+      "Bash(.venv/Scripts/python.exe -m pytest tests/eval -q)"
     ]
   }
 }

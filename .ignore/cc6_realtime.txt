@@ -4127,4 +4127,787 @@ completed (exit code 0)
 ────────────────────────────────────────────────────────────────────────────────>                                                                               ────────────────────────────────────────────────────────────────────────────────  | Opus 4.7 (1M context) | gpt-realtime-2_openai | main | ctx 88% | 5h 51% |…
   ⏵⏵ accept edits on (shift+tab to cycle)
 
+ Bug found and fixed during the test
+
+  /voicemails returned HTTP 500. The Vite proxy entry '/voice': { … } was a
+  prefix match capturing /voicemails and forwarding it to the edge (which has no
+   such route → ECONNREFUSED → 500). The proxy was also dead code (browser
+  connects directly to edge for the WebSocket via VITE_EDGE_URL). Removed the
+  proxy entry; left a comment explaining why so it doesn't get re-added.
+
+  Verified: all 5 cockpit routes return HTTP 200; /voicemails and /conversations
+   rendered correctly with the right data.
+
+  Repo state
+
+  main at 6650f51. Working tree clean. Three Realtime models in active use, six
+  features (voicemail, note-taker, bilingual, audit, eval-gen, plus the original
+   conversational + translate paths) all wire up end-to-end with live OpenAI
+  handshakes confirmed.
+
+✻ Brewed for 1h 4m 32s
+
+> update README and docs with the latest fixes. also create a doc on all the      testing that you have done (both claude in chrome and using                     api/cli/terminal). describe what the tests are, what they test, the coverage,    what have not been tested                                                                                                                                    ● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai && grep -rE
+      "\(/voice\)|/voice |proxy.*voice|voice'" docs/ 2>&1 | head -10)
+  ⎿  docs/concepts/realtime-conversations.md:  decided_via     text,                      -- 'voice' | 'cockpit' | 'auto'
+     docs/concepts/voicemail.md:2. Twilio POSTs /twilio/voice on the edge.
+     … +4 lines (ctrl+o to expand)
+                                                                                ● Writing the testing doc now, then updating README + ops.md.                                                                                                   ● Write(docs\testing.md)                                                          ⎿  Wrote 463 lines to docs\testing.md
+       2 # Testing — what's covered and what isn't                                     3 A complete view of every test layer in this codebase, grouped by
+          *how
+       4 it runs* rather than by feature. For each layer: what runs, what
+          it
+       6 asserts, and the limitations.
+       7 The headline numbers as of `main` at the latest tested commit:
+       8
+       9 ```
+      10 ✓  61 Python tests          (core/tests/)
+     … +597 lines (ctrl+o to expand)
+
+● Now updating the README to link the new testing doc and reflect the latest fix
+   counts.
+                                                                                ● Update(README.md)
+  ⎿  Added 12 lines, removed 3 lines                                                  292  - ✅ All 9 build phases complete (41 tasks per [`PLAN.md`](PLA                  N.md))
+      293  - ✅ All 6 whisper-feature phases complete
+      294  - ✅ 61 Python tests + 27 Node tests passing
+      295 -- ✅ 8 HVAC scenario evals passing
+      295 +- ✅ 8 HVAC scenario evals passing (incl. translate-bilingual,
+      296 +  notetaker, voicemail-after-hours)
+      297  - ✅ ruff + tsc clean
+      297 -- ✅ 3 alembic migrations applied
+      298 -- ✅ Three Realtime models in active use across 11 features
+      298 +- ✅ 3 alembic migrations applied (head: `0003_audit_divergenc
+          +es`)
+      299 +- ✅ Three Realtime models in active use:
+      300 +  - `gpt-realtime-2` at `wss://api.openai.com/v1/realtime?mode
+          +l=gpt-realtime-2`
+      301 +  - `gpt-realtime-translate` at `wss://api.openai.com/v1/realt
+          +ime?model=gpt-realtime-translate`
+      302 +  - `gpt-realtime-whisper` at `wss://api.openai.com/v1/realtim
+          +e?intent=transcription` (live handshake confirmed)
+      303 +- ✅ 5 cockpit routes (Talk · Approvals · Voicemails · Audit ·
+          + Conversations) all return HTTP 200
+      304 +- ✅ Browser-driven feature test pass complete — see [`docs/te
+          +sting.md`](docs/testing.md)
+      305
+      306 +For the full test-coverage matrix, gaps inventory, and how to
+      307 +reproduce every layer locally, see [`docs/testing.md`](docs/te
+          +sting.md).
+      308 +
+      309  ---
+      310
+      311  ## Operations
+
+● Update(README.md)
+  ⎿  Added 1 line
+      277  | Map any model to the features that use it | [`docs/reference                  /model-feature-map.md`](docs/reference/model-feature-map.md) |
+      278  | Deep-dive on the GA Realtime API itself | [`docs/reference/g                  pt-realtime-2.md`](docs/reference/gpt-realtime-2.md) |
+      279  | End-to-end Twilio integration walk-through | [`docs/referenc
+           e/twilio-integration.md`](docs/reference/twilio-integration.md
+           ) |
+      280 +| **What's tested + coverage matrix + known gaps** | [`docs/te
+          +sting.md`](docs/testing.md) |
+      281  | Operations runbook | [`docs/ops.md`](docs/ops.md) |
+      282
+      283  Concept docs cover each subsystem in depth — voice agents, rea
+           ltime
+
+● Adding the Vite-proxy gotcha to ops.md and linking the new testing doc from
+  the index.
+                                                                                ● Reading 1 file… (ctrl+o to expand)
+  ⎿  docs\ops.md                                                                                                                                                ● Update(docs\ops.md)                                                             ⎿  Added 24 lines                                                                   156  shape (no `output_modalities`, no `audio.output`, no `tools`,                   no                                                                         157  `instructions`). See `edge/src/openai/transcription.ts` for th                  e
+      158  canonical payload.
+      159 +
+      160 +## Vite proxy keys are prefix-matched, not exact
+      161 +
+      162 +A short Vite gotcha that bit us during testing.
+      163 +
+      164 +In `frontend/vite.config.ts` the `proxy:` keys are *prefixes*.
+          + A rule
+      165 +keyed `'/voice'` matches **any** URL starting with that string
+          +,
+      166 +including the React Router client-side route `/voicemails`. If
+          + you add
+      167 +a `'/voice'` proxy rule, requests for `/voicemails` will be fo
+          +rwarded
+      168 +to the proxy target, the SPA never gets to render that route,
+          +and the
+      169 +user sees HTTP 500 (`ECONNREFUSED` if the target has no `/voic
+          +emails`
+      170 +endpoint).
+      171 +
+      172 +**Symptom:** `/voicemails` returns 500. Frontend log shows
+      173 +`http proxy error: /voicemails  AggregateError [ECONNREFUSED]`
+          +.
+      174 +
+      175 +**Fix:** Either drop the `'/voice'` rule (the browser may not
+          +need
+      176 +the proxy at all if it talks to the edge directly via
+      177 +`VITE_EDGE_URL` — that's our v1 setup), or use a more specific
+          + match
+      178 +that won't capture `/voicemails`, e.g. a regex key
+      179 +`'^/voice/'` (with trailing slash).
+      180 +
+      181 +The current `vite.config.ts` only proxies `/v1` (to the core);
+          + browser
+      182 +audio WebSockets connect directly to the edge.
+
+● Update(docs\index.md)
+  ⎿  File must be read first
+                                                                                  Read 1 file (ctrl+o to expand)
+                                                                                ● Update(docs\index.md)                                                           ⎿  Added 2 lines, removed 1 line                                                    57                                                                              58  - [`SPEC.md`](../SPEC.md) — the platform contract.                          59  - [`PLAN.md`](../PLAN.md) — the implementation plan, 9 phases /                  41 tasks.                                                                  60 -- [`docs/ops.md`](ops.md) — operations runbook (recovery proced                -ures).
+      60 +- [`docs/ops.md`](ops.md) — operations runbook (recovery proced
+         +ures + gotchas).
+      61 +- [`docs/testing.md`](testing.md) — every test layer, coverage
+         +matrix, gaps.
+      62  - [`docs/eval-format.md`](eval-format.md) — scenario eval YAML
+          schema.
+      63  - [`README.md`](../README.md) — install, build, run.
+
+● Validating cross-links and committing.
+
+──────────────────────────────────────────────────────────────────────────────── Bash command
+                                                                                   cd C:/Users/simon/Downloads/gpt-realtime-2_openai && grep -rE
+   "TBD|TODO|coming soon|see X for details" docs/testing.md 2>&1 | head -5 &&
+    echo "---broken-link check---" && for link in "docs/use-cases.md"
+   "docs/eval-format.md" "docs/ops.md"; do test -f "$link" && echo "✓ $link"
+   || echo "✗ $link"; done && echo "---" && git add -A && git commit -m
+   "$(cat <<'EOF'
+   docs: add docs/testing.md + sync README/ops/index for the latest fixes
+
+   Adds a new top-level testing reference and threads it through the
+   existing docs.
+
+   New file:
+
+     • docs/testing.md — every test layer in the codebase, what each
+       layer covers, the coverage matrix per feature, and an honest
+       inventory of gaps. Sections:
+         1. Layers at a glance
+         2. Python tests (61, per-file breakdown)
+         3. Eval scenarios (8 HVAC YAMLs, per-scenario assertions)
+         4. Edge tests (27, including transcription contract pinning)
+         5. Lint + typecheck
+         6. Alembic migrations (3, applied + verified)
+         7. Operator scripts (synthesize-eval, audit)
+         8. Live OpenAI probes (Phase 1 GA discovery, Phase 6 whisper
+            endpoint discovery)
+         9. Browser feature tests via Claude in Chrome — including the
+            two bugs the test pass surfaced and how they were fixed
+        10. Coverage matrix (features × test layers)
+        11. Gaps inventory (real Twilio calls, real mic capture, real
+            audio through whisper, mid-session translate flip with live
+            OpenAI, load behavior, multi-vertical, non-Chrome browsers)
+        12. How to run everything yourself (paste-ready commands)
+
+   Updates:
+
+     • README.md — Status section now lists the three Realtime endpoint
+       URLs explicitly (including the dedicated transcription endpoint
+       we just fixed). New row in the Documentation Map pointing at
+   Updates:
+
+     • README.md — Status section now lists the three Realtime endpoint
+       URLs explicitly (including the dedicated transcription endpoint
+       we just fixed). New row in the Documentation Map pointing at
+      60 +- [`docs/ops.md`](ops.md) — operations runbook (recovery proced
+         +ures + gotchas).
+      61 +- [`docs/testing.md`](testing.md) — every test layer, coverage
+         +matrix, gaps.
+      62  - [`docs/eval-format.md`](eval-format.md) — scenario eval YAML
+          schema.
+      63  - [`README.md`](../README.md) — install, build, run.
+
+● Validating cross-links and committing.
+
+● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai && grep -rE
+      "TBD|TODO|coming soon|see X for details" docs/testing.md 2>&1 | head -5 &&
+       echo "---broken-link ch…)
+  ⎿  ---broken-link check---
+     ✓ docs/use-cases.md
+     ✓ docs/eval-format.md
+     … +16 lines (ctrl+o to expand)
+  ⎿  (timeout 1m)                                                                                                                                               ● Pushed at c7c1a7c.                                                            
+  ✓ Created docs/testing.md (~440 lines)                                          ✓ Updated 4 existing files                                                      ✓ Cross-links verified                                                          ✓ No stubs detected                                                                                                                                             What landed
+
+  New file: docs/testing.md — the comprehensive testing reference, structured
+  as:
+
+  Section: Layers at a glance
+  What it documents: 8 test surfaces — what each runs, what live deps it needs
+  ────────────────────────────────────────
+  Section: Python tests
+  What it documents: All 61, per-file breakdown of what each tests
+  ────────────────────────────────────────
+  Section: Eval scenarios
+  What it documents: All 8 HVAC YAMLs with what each asserts
+  ────────────────────────────────────────
+  Section: Edge tests
+  What it documents: All 27, including the transcription-contract pinning
+  ────────────────────────────────────────
+  Section: Lint + typecheck
+  What it documents: ruff, mypy, tsc with what each enforces
+  ────────────────────────────────────────
+  Section: Alembic migrations
+  What it documents: 3 revisions, what each adds
+  ────────────────────────────────────────
+  Section: Operator scripts
+  What it documents: synthesize-eval and audit runtime behavior
+  ────────────────────────────────────────
+  Section: Live OpenAI probes
+  What it documents: The Phase-1 GA-format discovery + the Phase-6 whisper
+    endpoint discovery
+  ────────────────────────────────────────
+  Section: Browser feature tests
+  What it documents: Everything verified in this Claude-in-Chrome session,
+    including the two bugs found and fixed mid-test
+  ────────────────────────────────────────
+  Section: Coverage matrix
+  What it documents: Features × test layers (every cell either ✅ with reference
+
+    or — with explanation)
+  ────────────────────────────────────────
+  Section: Gaps
+  What it documents: 8 explicit "not tested yet" items: real Twilio calls, real
+    mic capture, real audio through whisper, mid-session translate flip live,
+    voice-phrase classifier with real audio, load/concurrency, multi-vertical,
+    non-Chrome browsers
+  ────────────────────────────────────────
+  Section: How to run everything yourself
+  What it documents: 8 paste-ready blocks for reproducing each layer
+
+  Updates synced:
+
+  - README.md — Status section now lists the three Realtime endpoint URLs
+  explicitly (including ?intent=transcription for whisper). Documentation Map
+  adds a row for docs/testing.md.
+  - docs/ops.md — New "Vite proxy keys are prefix-matched" section documenting
+  the /voicemails 500 we hit during the test pass and how to avoid re-creating
+  it.
+  - docs/index.md — Operational docs list adds testing.md.
+
+  The repo's now self-documenting end-to-end: someone arriving cold can read
+  docs/testing.md and know exactly what's been verified, what hasn't, and how to
+   reproduce every layer.
+
+✻ Crunched for 5m 59s
+
+────────────────────────────────────────────────────────────────────────────────
+> do a final regression sweep
+────────────────────────────────────────────────────────────────────────────────
+  | Opus 4.7 (1M context) | gpt-realtime-2_openai | main | ctx 90% | 5h 0% | …
+  ⏵⏵ accept edits on (shift+tab to cycle)
+
+
+
+
+ ────────────────────────────────────────
+  Section: Gaps
+  What it documents: 8 explicit "not tested yet" items: real Twilio calls, real
+    mic capture, real audio through whisper, mid-session translate flip live,
+    voice-phrase classifier with real audio, load/concurrency, multi-vertical,
+    non-Chrome browsers
+  ────────────────────────────────────────
+  Section: How to run everything yourself
+  What it documents: 8 paste-ready blocks for reproducing each layer
+
+  Updates synced:
+
+  - README.md — Status section now lists the three Realtime endpoint URLs
+  explicitly (including ?intent=transcription for whisper). Documentation Map
+  adds a row for docs/testing.md.
+  - docs/ops.md — New "Vite proxy keys are prefix-matched" section documenting
+  the /voicemails 500 we hit during the test pass and how to avoid re-creating
+  it.
+  - docs/index.md — Operational docs list adds testing.md.
+
+  The repo's now self-documenting end-to-end: someone arriving cold can read
+  docs/testing.md and know exactly what's been verified, what hasn't, and how to
+   reproduce every layer.
+
+✻ Crunched for 5m 59s
+
+> do a final regression sweep - use both claude in chrome or command line       
+● Final regression sweep across all layers. Tracking and parallelizing.
+
+──────────────────────────────────────────────────────────────────────────────── Bash command
+                                                                                   cd C:/Users/simon/Downloads/gpt-realtime-2_openai && echo "════ STACK           HEALTH ════" && docker compose ps --format '{{.Name}} {{.Status}}' 2>&1 &&       echo "" && echo "════ HEALTHZ ════" && echo -n "core:     " && curl -s         http://localhost:8000/healthz && echo "" && echo -n "edge:     " && curl        -s http://localhost:8080/healthz && echo "" && echo -n "frontend: " &&          curl -s -o /dev/null -w "HTTP %{http_code}\n" http://localhost:5173/ &&         echo "" && echo "════ COCKPIT ROUTES ════" && for p in / /approvals
+   /voicemails /audit /conversations; do echo -n "$p: "; curl -s -o /dev/null
+    -w "HTTP %{http_code}" http://localhost:5173$p; echo ""; done && echo ""
+   && echo "════ API ENDPOINTS ════" && echo -n "/v1/conversations?limit=2:
+   curl -s -o /dev/null -w "HTTP %{http_code}\n" http://localhost:5173/ &&
+   echo "" && echo "════ COCKPIT ROUTES ════" && for p in / /approvals
+   /voicemails /audit /conversations; do echo -n "$p: "; curl -s -o /dev/null
+    -w "HTTP %{http_code}" http://localhost:5173$p; echo ""; done && echo ""
+   && echo "════ API ENDPOINTS ════" && echo -n "/v1/conversations?limit=2:
+   curl -s -o /dev/null -w "HTTP %{http_code}\n" http://localhost:5173/ &&
+   echo "" && echo "════ COCKPIT ROUTES ════" && for p in / /approvals
+   /voicemails /audit /conversations; do echo -n "$p: "; curl -s -o /dev/null
+    -w "HTTP %{http_code}" http://localhost:5173$p; echo ""; done && echo ""
+   && echo "════ API ENDPOINTS ════" && echo -n "/v1/conversations?limit=2:
+● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai && echo "════ STACK
+●     HEALTH ════" && docker compose ps --format '{{.Name}} {{.Status}}' 2>&1 &&
+       echo "" && echo…)
+  ⎿  Running… (8s · timeout 1m)
+     cockpit-postgres Up 13 hours (healthy)
+● Bas/: HTTP 200
+     /v1/conversations?limit=2:  2
+
+● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai && echo "════ STACK
+      HEALTH ════" && docker compose ps --format '{{.Name}} {{.Status}}' 2>&1 &&
+       echo "" && echo…)
+  ⎿  ════ STACK HEALTH ════
+     cockpit-core Up 3 hours
+     cockpit-edge Up 2 hours
+     … +26 lines (ctrl+o to expand)
+  ⎿  (timeout 1m)
+
+● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai/edge && echo "════
+      EDGE: typecheck + tests ════" && npm run typecheck 2>&1 | tail -3 && npm
+      test --silent 2>&1…)
+  ⎿  Running in the background (↓ to manage)
+
+● Stack + all 5 cockpit routes + 7 API endpoints green. Backend tests running in   background. Probing live OpenAI for all 3 models and exercising browser
+  WebSocket flows.
+                                                                                  Calling claude-in-chrome… (ctrl+o to expand)
+
+────────────────────────────────────────────────────────────────────────────────
+ Bash command                                                                   
+   cd C:/Users/simon/Downloads/gpt-realtime-2_openai && echo "════ LIVE
+   OPENAI PROBE — 3 MODELS ════" && cat <<'EOF' | docker compose exec -T edge
+    node --import tsx --input-type=module -                                        import WebSocket from 'ws';
+
+   const cases = [
+     { name: 'gpt-realtime-2', url:
+   'wss://api.openai.com/v1/realtime?model=gpt-realtime-2', payload: {
+       type: 'session.update',
+       session: { type: 'realtime', model: 'gpt-realtime-2',
+   output_modalities: ['audio'],
+                  audio: { input: { format: { type: 'audio/pcm', rate: 24000
+   }, turn_detection: { type: 'semantic_vad' } },
+                           output: { format: { type: 'audio/pcm', rate: 24000
+    }, voice: 'alloy' } } } },
+     },
+     { name: 'gpt-realtime-translate', url:
+   'wss://api.openai.com/v1/realtime?model=gpt-realtime-translate', payload:
+   {
+       type: 'session.update',
+       session: { type: 'realtime', model: 'gpt-realtime-translate',
+   output_modalities: ['audio'],
+                  audio: { input: { format: { type: 'audio/pcm', rate: 24000
+   } },
+                           output: { format: { type: 'audio/pcm', rate: 24000
+    }, voice: 'alloy' } } } },
+     },
+     { name: 'gpt-realtime-whisper', url:
+   'wss://api.openai.com/v1/realtime?intent=transcription', payload: {
+       type: 'session.update',
+       session: { type: 'transcription',
+                  audio: { input: { format: { type: 'audio/pcm', rate: 24000
+   },
+                                    transcription: { model:
+   'gpt-realtime-whisper' } } } },
+     } },
+   ];
+
+   async function probe(c) {
+     return new Promise(resolve => {
+       const ws = new WebSocket(c.url, { headers: { Authorization: 'Bearer '
+   + process.env.OPENAI_API_KEY } });
+       const events = [];
+       const t = setTimeout(() => { try { ws.close(); } catch(_) {} resolve({
+    name: c.name, events }); }, 4000);
+       const ws = new WebSocket(c.url, { headers: { Authorization: 'Bearer '
+   + process.env.OPENAI_API_KEY } });
+       const events = [];
+       const t = setTimeout(() => { try { ws.close(); } catch(_) {} resolve({
+    name: c.name, events }); }, 4000);
+   background. Probing live OpenAI for all 3 models and exercising browser
+  WebSocket flows.
+
+● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai && echo "════ LIVE
+      OPENAI PROBE — 3 MODELS ════" && cat <<'EOF' | docker compose exec -T edge
+       node --import ts…)
+  ⎿  ════ LIVE OPENAI PROBE — 3 MODELS ════
+     [
+       {
+     … +33 lines (ctrl+o to expand)
+  ⎿  (timeout 1m)
+
+  Read 1 file, called claude-in-chrome (ctrl+o to expand)
+
+● Background command "Backend regression in parallel" completed (exit code 0)
+
+● 3-of-3 live OpenAI handshakes ✅. Reading backend regression output and
+  refreshing the browser tab.                                                                                                                                     Read 1 file, called claude-in-chrome (ctrl+o to expand)                                                                                                       ● Backend regression: 27 + 27 + 61 + ruff/tsc all clean. New browser tab          acquired. Logging in and running the WebSocket + operator-script tests in one   pass.                                                                         
+  Calling claude-in-chrome… (ctrl+o to expand)
+
+──────────────────────────────────────────────────────────────────────────────── Bash command                                                                   
+  ⎿  Waiting…                                                                   
+──────────────────────────────────────────────────────────────────────────────── Bash command
+                                                                                  acquired. Logging in and running the WebSocket + operator-script tests in one
+  pass.
+
+  Called claude-in-chrome (ctrl+o to expand)
+
+● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai && export
+      POSTGRES_HOST=localhost POSTGRES_PORT=5432 POSTGRES_USER=cockpit
+      POSTGRES_PASSWORD=cockpit-dev-pw PO…)
+  ⎿  ROW_COUNTS_BEFORE:
+        mode    | count                                                              -----------+-------
+     … +26 lines (ctrl+o to expand)
+  ⎿  (timeout 1m)
+
+● Both operator scripts work, persistence shows all 3 modes (4 notetaker, 6
+  realtime2, 2 translate). Login + WebSocket smoke + final screenshot.
+
+  Called claude-in-chrome (ctrl+o to expand)                                      └─────────────────────────────────────────┴──────────────────────────────┘    
+  What I did not re-test (intentionally — covered in docs/testing.md gaps         section)
+
+  - A real Twilio phone call through PSTN (no test number wired)
+  - Real microphone capture in browser (would require user mic permission)        - Real spoken audio passing through whisper (silent PCM during probes)          - Sustained load behavior
+
+  Bugs uncovered during this sweep: 0
+
+  Both bugs from the previous test pass (whisper endpoint shape, Vite /voice
+  proxy capturing /voicemails) remain fixed; commits 847a382 and 6650f51 are      still in main. The repo is in a known-good state.
+
+✻ Worked for 4m 16s
+
+> one final pass on the docs to make them up to date with codes and testings.   
+● Auditing what's still stale relative to the shipped code + tests.                                                                                             ● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai && wc -l CLAUDE.md           PLAN.md SPEC.md 2>&1 && echo "---" && grep -nE "implementation has not|No
+      code|awaiting.*ap…)                                                         ⎿    219 CLAUDE.md
+      1134 PLAN.md                                                                     736 SPEC.md
+     … +15 lines (ctrl+o to expand)
+                                                                                ● Three root docs are the most stale: CLAUDE.md says "implementation has not      started," SPEC.md still claims 2 modes, PLAN.md has no record of the 6 whisper   phases. Updating each.                                                       
+● Reading 1 file… (ctrl+o to expand)                                              ⎿  CLAUDE.md                                                                                                                                                  ● Update(CLAUDE.md)                                                               ⎿  Added 9 lines, removed 2 lines                                                    1  # Project Context — Voice Operations Cockpit                                 2                                                                               3  This file is the cold-start brief for any new Claude Code sessi                 on.
+       4 -Read this first, then `SPEC.md`, then `PLAN.md`. No code has be
+         -en
+       5 -written yet; we are at the end of design and the start of build
+         -.
+       4 +Read this first, then `README.md`, then `SPEC.md`/`PLAN.md` for
+       5 +historical context.
+       6
+       7 +**Status as of the latest commit:** the platform is fully built
+         +,
+       8 +tested, and documented. All 9 build phases (41 tasks) plus 6
+       9 +follow-on whisper-feature phases have shipped. Three GA Realtim
+         +e
+      10 +models (`gpt-realtime-2`, `gpt-realtime-translate`,
+      11 +`gpt-realtime-whisper`) are in active use. The repo runs cleanl
+         +y
+      12 +with `make up && make migrate && make seed-hvac`.
+      13 +
+      14  ---
+      15
+      16  ## What we are building
+
+● Update(CLAUDE.md)
+  ⎿  Added 6 lines, removed 2 lines
+      58      └── gpt-realtime-2-docs.txt  ← link list to OpenAI guides               59  ```
+      60                                                                              61 -**No code has been written.** No `core/`, `edge/`, `frontend/`,
+      62 -`verticals/`, no docker-compose, no migrations.
+      61 +**Everything is built.** `core/` (Python/FastAPI), `edge/`
+      62 +(Node/Fastify), `frontend/` (React/Vite), `verticals/hvac/`,
+      63 +`docker-compose.yml`, three alembic migrations (head:
+      64 +`0003_audit_divergences`), and 21+ doc files under `docs/` are
+         +all
+      65 +in place. See `README.md` for the feature inventory and
+      66 +`docs/index.md` for the doc map.
+      67
+      68  ---
+      69
+
+● Update(CLAUDE.md)
+  ⎿  Added 34 lines, removed 10 lines
+      123  ## Where we are right now                                                  124
+      125  1. ✅ Spec written and confirmed (`SPEC.md` v0.1).                         126 -2. ✅ Plan written (`PLAN.md` v0.1).
+      127 -3. ⬜ Plan awaiting final human approval.
+      128 -4. ⬜ Implementation has not started. No code exists.
+      126 +2. ✅ Plan written (`PLAN.md` v0.1) — 9 phases, 41 tasks, all
+          +complete.
+      127 +3. ✅ Six follow-on phases for the third GA Realtime model
+      128 +   (`gpt-realtime-whisper`) shipped: voicemail mode, note-take
+          +r mode,
+      129 +   bilingual capture, audit transcripts + divergence diff, and
+      130 +   eval-from-real-call synthesis.
+      131 +4. ✅ Two real bugs found via testing and fixed:
+      132 +   `fix(whisper)` — wrong endpoint URL (commit `847a382`);
+      133 +   `fix(frontend)` — Vite proxy capturing `/voicemails` (commi
+          +t `6650f51`).
+      134 +5. ✅ Comprehensive testing doc + doc set refreshed; `docs/tes
+          +ting.md`
+      135 +   has the coverage matrix and gaps inventory.
+      136 +6. ✅ Final regression sweep passed: 27 edge tests + 61 Python
+          + tests +
+      137 +   ruff/tsc clean + alembic head + 3 live OpenAI handshakes +
+          +5
+      138 +   cockpit routes + 3 WebSocket modes + 2 operator scripts.
+      139
+      130 -**Next decision point** — once the user approves the plan, cho
+          -ose
+      131 -between:
+      140 +**Repo is in a known-good state.** Public at
+      141 +https://github.com/az9713/gpt-realtime-2-demo.
+      142
+      133 -- `agent-skills:incremental-implementation` — one task at a ti
+          -me,
+      134 -  human reviews each.
+      135 -- `superpowers:execute-plan` — batched execution with review
+      136 -  checkpoints between phases.
+      143 +### Most useful commands for a fresh session
+      144
+      138 -The user has not yet picked between these.
+      145 +```bash
+      146 +# bring up the stack (5 containers)
+      147 +make up && make migrate && make seed-hvac
+      148
+      149 +# run all tests
+      150 +make test                    # core + edge
+      151 +make test-eval               # 8 HVAC scenarios
+      152 +
+      153 +# operator scripts
+      154 +make synthesize-eval CONV=<uuid>
+      155 +make audit
+      156 +```
+      157 +
+      158 +### Where to read first when something breaks
+      159 +
+      160 +- `docs/ops.md` — recovery procedures + the docker-compose
+      161 +  recreate-vs-restart and Vite proxy gotchas.
+      162 +- `docs/testing.md` — what's covered, what isn't, how to repro
+          +duce.
+      163 +
+      164  ---
+      165
+      166  ## How to work with this user
+
+● Now SPEC.md (modes + data model) and PLAN.md (whisper-phases addendum).
+
+● Reading 1 file… (ctrl+o to expand)                                              ⎿  SPEC.md
+                                                                                ● Update(SPEC.md)
+  ⎿  Added 17 lines, removed 7 lines                                                  143                                                                             144  ### Modes                                                                  145
+      146 -- **Conversational (Realtime-2):** the default. Reasoning, too
+          -l calls,
+      147 -  preambles, parallel actions.
+      148 -- **Translate (Realtime-Translate):** mode toggle on a session
+          -. The agent
+      149 -  becomes a passthrough translator; tools and orchestration ar
+          -e bypassed
+      150 -  while the mode is active.
+      146 +The four supported session modes (post-Phase-1 widening):
+      147
+      152 -Modes are per-session and switchable mid-session by an operato
+          -r command
+      153 -or by a vertical-defined trigger.
+      148 +- **`realtime2`** — the conversational default, powered by
+      149 +  `gpt-realtime-2`. Reasoning, tool calls, preambles, parallel
+      150 +  actions.
+      151 +- **`translate`** — mode toggle on an active session, powered
+          +by
+      152 +  `gpt-realtime-translate`. Passthrough translation; tools and
+      153 +  orchestration are bypassed.
+      154 +- **`voicemail`** — start-time-only mode for inbound calls out
+          +side
+      155 +  a vertical's `business_hours`. Powered by `gpt-realtime-whis
+          +per`
+      156 +  in solo mode (no agent persona, no tools).
+      157 +- **`notetaker`** — start-time-only mode for dispatcher-initia
+          +ted
+      158 +  silent transcription. Powered by `gpt-realtime-whisper` in s
+          +olo
+      159 +  mode.
+      160
+      161 +Mid-session swaps are allowed only between `realtime2` and
+      162 +`translate`. The other two are start-time only and are gated a
+          +t the
+      163 +`ModeSwitchBody.mode` Pydantic literal in `core/api/sessions.p
+          +y`.
+      164 +
+      165  ---
+      166
+      167  ## 3. Components
+
+● Update(SPEC.md)
+  ⎿  Added 2 lines
+      317    vertical        text          not null                                   318    surface         text          not null  -- 'browser' | 'phon
+           e'                                                                         319    mode            text          not null  -- 'realtime2' | 'tr
+           anslate'                                                                   320 +                                           --   | 'voicemail'
+          +| 'notetaker'
+      321 +                                           --   (CHECK widened
+          + by migration 0002)
+      322    language        text          null      -- BCP-47, set after
+            detect
+      323    customer_ref    jsonb         null      -- vertical-defined
+      324    agent_persona   text          null
+
+● Reading 1 file… (ctrl+o to expand)
+  ⎿  SPEC.md
+                                                                                ● Update(SPEC.md)
+  ⎿  Added 15 lines                                                                   372    payload_json    jsonb         not null                                   373    cost_usd        numeric(10,6) not null default 0                         374  )                                                                          375 +
+      376 +-- Added by migration 0003 (Phase 5 — audit transcripts).
+      377 +-- Populated by the `make audit` runner for verticals with
+      378 +-- `audit_transcripts: true`.
+      379 +audit_divergences (
+      380 +  id                 uuid          pk
+      381 +  conversation_id    uuid          fk
+      382 +  agent_turn_id      uuid          null    -- nullable when th
+          +e agent missed an utterance
+      383 +  canonical_turn_id  uuid          null    -- nullable when th
+          +e agent imagined an utterance
+      384 +  kind               text          not null -- 'paraphrase' |
+          +'omission' | 'addition' | 'mismatch'
+      385 +  score              numeric(5,4)  not null -- token-level WER
+          +, normalized
+      386 +  agent_text         text          null
+      387 +  canonical_text     text          null
+      388 +  flagged_at         timestamptz   not null default now()
+      389 +)
+      390  ```
+      391
+      392  Migrations via `alembic`. No ORM — raw SQL via `asyncpg` for t
+           he agent
+
+● Update(SPEC.md)
+  ⎿  Added 20 lines
+      738  4. **Frontend hosting:** **separate container**. The cockpit U                  I ships
+      739     as its own service (nginx serving built Vite assets) so fro
+           ntend
+      740     asset traffic does not compete with the audio edge.
+      741 +5. **Whisper endpoint** *(Phase 1+ addendum)*: streaming trans
+          +cription
+      742 +   uses OpenAI's dedicated `wss://api.openai.com/v1/realtime?i
+          +ntent=transcription`
+      743 +   URL, not the conversational `?model=` URL family. Model id
+          +flows
+      744 +   in the session.update payload at
+      745 +   `audio.input.transcription.model`. The cockpit's
+      746 +   `TranscriptionSession` class encapsulates this; the URL is
+      747 +   contract-pinned in `edge/tests/transcription.test.ts`.
+      748 +6. **Mode mid-session switching** *(Phase 3+ addendum)*: only
+      749 +   `realtime2 ↔ translate` flips are permitted at runtime. `vo
+          +icemail`
+      750 +   and `notetaker` are start-time-only modes (gate enforced by
+          + the
+      751 +   `ModeSwitchBody.mode` Pydantic literal).
+      752 +7. **Audit transcripts opt-in** *(Phase 5+ addendum)*: per-ver
+          +tical
+      753 +   `audit_transcripts: true` flag in `pack.yaml`. When set, a
+      754 +   `gpt-realtime-whisper` sidecar runs always-on alongside the
+      755 +   primary session, enabling the divergence-diff pipeline. Def
+          +ault
+      756 +   off; HVAC stays off.
+      757 +8. **Eval generation source** *(Phase 6+ addendum)*: v1 reads
+      758 +   transcripts from `app.turns` (no live whisper, no audio rep
+          +lay),
+      759 +   honoring §13.2's no-audio-storage decision. v1.5 may accept
+          + a
+      760 +   stored audio file and re-transcribe with whisper.
+      761
+      762  ---
+      763
+
+● Now PLAN.md addendum.
+
+  Read 1 file (ctrl+o to expand)                                                
+● Update(PLAN.md)                                                                 ⎿  Added 41 lines, removed 1 line
+      1131  - [x] No task touches more than ~5 files (one or two M tasks                    brush up                                                                  1132    against this; revisit if they grow during implementation).              1133  - [x] Checkpoints exist between every major phase.                        1134 -- [ ] **Human has reviewed and approved this plan.**
+      1134 +- [x] **Human has reviewed and approved this plan.**
+      1135 +
+      1136 +---
+      1137 +
+      1138 +## Phases 10–15 — `gpt-realtime-whisper` integration (post-v0
+           +.1)
+      1139 +
+      1140 +After the original 9 phases shipped, the third GA Realtime mo
+           +del
+      1141 +(`gpt-realtime-whisper`) was unused. Six follow-on phases bro
+           +ught it
+      1142 +in. The plan for these phases lives at
+      1143 +`C:\Users\simon\.claude\plans\give-plan-to-implement-purring-
+           +horizon.md`
+      1144 +(approved Plan-Mode artifact). Status as of the current `main
+           +`:
+      1145 +
+      1146 +| Phase | Feature | Status | Commit |
+      1147 +|---|---|---|---|
+      1148 +| 10 (Foundation) | Migration `0002_widen_modes`; `Transcript
+           +ionSession` class; whisper config; `MockOpenAIWebSocket` fixt
+           +ure | ✅ shipped | `f1bd7dc` |
+      1149 +| 11 (Feature 2) | Bilingual transcript capture in translate
+           +mode (sidecar, lazy) | ✅ shipped | `0b38af6` |
+      1150 +| 12 (Feature 3) | Note-taker mode (solo whisper, agentless s
+           +ession) | ✅ shipped | `a0650ff` |
+      1151 +| 13 (Feature 1) | Voicemail / overflow handler (TwiML branch
+           +, business_hours, voicemail.md greeting) | ✅ shipped | `a0f9
+           +e5f` |
+      1152 +| 14 (Feature 5) | Audit transcripts + divergence diff (migra
+           +tion `0003_audit_divergences`, `make audit`) | ✅ shipped | `
+           +9d062ef` |
+      1153 +| 15 (Feature 4) | Eval generation from real calls (`make syn
+           +thesize-eval CONV=<uuid>`) | ✅ shipped | `53e2790` |
+      1154 +
+      1155 +### Defects discovered during testing and fixed
+      1156 +
+      1157 +| Defect | Symptom | Fix commit |
+      1158 +|---|---|---|
+      1159 +| Whisper endpoint mismatch | OpenAI rejected our session.upd
+           +ate with *"Passing a transcription session update event to a
+           +realtime session is not allowed."* | `847a382` — switched to
+           +`wss://api.openai.com/v1/realtime?intent=transcription`, drop
+           +ped `turn_detection` from payload |
+      1160 +| Vite proxy too greedy | `/voicemails` returned HTTP 500 — t
+           +he `'/voice'` proxy entry was capturing the React Router rout
+           +e | `6650f51` — removed the dead `'/voice'` proxy entry; the
+           +browser already connects to the edge directly via `VITE_EDGE_
+           +URL` |
+      1161 +
+      1162 +### Final regression status
+      1163 +
+      1164 +- 27 edge tests + 61 Python tests + 8 HVAC eval scenarios — a
+           +ll green
+      1165 +- ruff + tsc clean
+      1166 +- `alembic current` reports `0003_audit_divergences (head)`
+      1167 +- 5 cockpit routes return HTTP 200 (Talk, Approvals, Voicemai
+           +ls, Audit, Conversations)
+      1168 +- 3 live OpenAI handshakes verified (gpt-realtime-2,
+      1169 +  gpt-realtime-translate, gpt-realtime-whisper)
+      1170 +- `make synthesize-eval` and `make audit` operator scripts ru
+           +n
+      1171 +  successfully end-to-end
+      1172 +
+      1173 +For the comprehensive coverage matrix and gap inventory, see
+      1174 +[`docs/testing.md`](docs/testing.md).
+
+● Final consistency check across all docs.
+
+● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai && echo "── stale test       counts (should be 27 / 61 / 88) ──" && grep -rnE "(12 [Nn]ode|18
+      [Nn]ode|24 [Nn]ode|14…)                                                     ⎿  ── stale test counts (should be 27 / 61 / 88) ──
+                                                                                     ── stale eval count (should be 8) ──
+     … +8 lines (ctrl+o to expand)
+                                                                                ● Two minor inconsistencies — fixing.                                                                                                                           ● Reading 1 file… (ctrl+o to expand)                                              ⎿  docs\concepts\integrations-observability.md                                                                                                                ● Update(docs\concepts\integrations-observability.md)                             ⎿  Added 5 lines, removed 3 lines                                                   263  broke. Production observability (the trace explorer) is the *s                  econd* —                                                                   264  once the regression hits prod and a real conversation surfaces                   it.
+      265
+      266 -The cockpit's `make test-eval` runs in <30 s for the 5 HVAC sc
+          -enarios.
+      267 -Adding a new scenario takes about 10 minutes per the docs in
+      268 -[eval-format.md](../eval-format.md). The cost-benefit on addit
+          -ional
+      266 +The cockpit's `make test-eval` runs in <30 s for the 8 HVAC sc
+          +enarios
+      267 +(scenarios 01-05 cover the realtime-2 conversational loop;
+      268 +06 covers translate-bilingual; 07 covers notetaker; 08 covers
+      269 +voicemail). Adding a new scenario takes about 10 minutes per t
+          +he docs
+      270 +in [eval-format.md](../eval-format.md). The cost-benefit on ad
+          +ditional
+      271  evals is heavily in favor of adding them.
+      272
+      273  ---
+
+● Update(docs\testing.md)
+  ⎿  File must be read first
+                                                                                  Reading 1 file… (ctrl+o to expand)
+  ⎿  docs\testing.md                                                                                                                                            ✢ Whisking… (4m 3s · ↓ 10.7k tokens · thought for 2s)                                                                                                           ────────────────────────────────────────────────────────────────────────────────>                                                                               ────────────────────────────────────────────────────────────────────────────────  | Opus 4.7 (1M context) | gpt-realtime-2_openai | main | ctx 93% | 5h 20% |…
+  ⏵⏵ accept edits on (shift+tab to cycle)
+
 

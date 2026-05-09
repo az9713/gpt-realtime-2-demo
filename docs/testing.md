@@ -298,7 +298,7 @@ The browser test pass surfaced two real issues, both fixed and re-verified:
 
 | Feature | Unit | Eval | Edge | Live probe | Browser |
 |---|---|---|---|---|---|
-| Realtime-2 conversational loop | ✅ | ✅ (5 scenarios) | ✅ (mock fixture) | — | ✅ |
+| Realtime-2 conversational loop | ✅ | ✅ (scenarios 01–05) | ✅ (mock fixture) | — | ✅ |
 | Tool dispatch + approvals | ✅ | ✅ | — | — | ✅ (UI + API) |
 | Translate mode + bilingual capture | ✅ (turn-model) | ✅ (06) | ✅ (sidecar) | — | ✅ (WS opens) |
 | Voicemail mode | ✅ (post_call summary) | ✅ (08) | ✅ (TwiML, routing) | — | ✅ (route + endpoint) |

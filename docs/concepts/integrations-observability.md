@@ -263,9 +263,11 @@ A scenario regression in CI is the *first* signal that something
 broke. Production observability (the trace explorer) is the *second* —
 once the regression hits prod and a real conversation surfaces it.
 
-The cockpit's `make test-eval` runs in <30 s for the 5 HVAC scenarios.
-Adding a new scenario takes about 10 minutes per the docs in
-[eval-format.md](../eval-format.md). The cost-benefit on additional
+The cockpit's `make test-eval` runs in <30 s for the 8 HVAC scenarios
+(scenarios 01-05 cover the realtime-2 conversational loop;
+06 covers translate-bilingual; 07 covers notetaker; 08 covers
+voicemail). Adding a new scenario takes about 10 minutes per the docs
+in [eval-format.md](../eval-format.md). The cost-benefit on additional
 evals is heavily in favor of adding them.
 
 ---

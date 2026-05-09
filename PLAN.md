@@ -1131,4 +1131,44 @@ When multiple agent sessions or developers are available:
 - [x] No task touches more than ~5 files (one or two M tasks brush up
   against this; revisit if they grow during implementation).
 - [x] Checkpoints exist between every major phase.
-- [ ] **Human has reviewed and approved this plan.**
+- [x] **Human has reviewed and approved this plan.**
+
+---
+
+## Phases 10–15 — `gpt-realtime-whisper` integration (post-v0.1)
+
+After the original 9 phases shipped, the third GA Realtime model
+(`gpt-realtime-whisper`) was unused. Six follow-on phases brought it
+in. The plan for these phases lives at
+`C:\Users\simon\.claude\plans\give-plan-to-implement-purring-horizon.md`
+(approved Plan-Mode artifact). Status as of the current `main`:
+
+| Phase | Feature | Status | Commit |
+|---|---|---|---|
+| 10 (Foundation) | Migration `0002_widen_modes`; `TranscriptionSession` class; whisper config; `MockOpenAIWebSocket` fixture | ✅ shipped | `f1bd7dc` |
+| 11 (Feature 2) | Bilingual transcript capture in translate mode (sidecar, lazy) | ✅ shipped | `0b38af6` |
+| 12 (Feature 3) | Note-taker mode (solo whisper, agentless session) | ✅ shipped | `a0650ff` |
+| 13 (Feature 1) | Voicemail / overflow handler (TwiML branch, business_hours, voicemail.md greeting) | ✅ shipped | `a0f9e5f` |
+| 14 (Feature 5) | Audit transcripts + divergence diff (migration `0003_audit_divergences`, `make audit`) | ✅ shipped | `9d062ef` |
+| 15 (Feature 4) | Eval generation from real calls (`make synthesize-eval CONV=<uuid>`) | ✅ shipped | `53e2790` |
+
+### Defects discovered during testing and fixed
+
+| Defect | Symptom | Fix commit |
+|---|---|---|
+| Whisper endpoint mismatch | OpenAI rejected our session.update with *"Passing a transcription session update event to a realtime session is not allowed."* | `847a382` — switched to `wss://api.openai.com/v1/realtime?intent=transcription`, dropped `turn_detection` from payload |
+| Vite proxy too greedy | `/voicemails` returned HTTP 500 — the `'/voice'` proxy entry was capturing the React Router route | `6650f51` — removed the dead `'/voice'` proxy entry; the browser already connects to the edge directly via `VITE_EDGE_URL` |
+
+### Final regression status
+
+- 27 edge tests + 61 Python tests + 8 HVAC eval scenarios — all green
+- ruff + tsc clean
+- `alembic current` reports `0003_audit_divergences (head)`
+- 5 cockpit routes return HTTP 200 (Talk, Approvals, Voicemails, Audit, Conversations)
+- 3 live OpenAI handshakes verified (gpt-realtime-2,
+  gpt-realtime-translate, gpt-realtime-whisper)
+- `make synthesize-eval` and `make audit` operator scripts run
+  successfully end-to-end
+
+For the comprehensive coverage matrix and gap inventory, see
+[`docs/testing.md`](docs/testing.md).
