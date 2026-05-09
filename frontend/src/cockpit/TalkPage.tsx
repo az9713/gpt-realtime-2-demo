@@ -11,7 +11,6 @@ interface SessionInfo {
   mode: SessionMode;
 }
 
-const FRAME_MS = 250;
 const SAMPLE_RATE = 24_000;
 
 export function TalkPage(): JSX.Element {
@@ -46,6 +45,7 @@ export function TalkPage(): JSX.Element {
     wsRef.current = ws;
 
     ws.onmessage = (ev) => {
+      if (wsRef.current !== ws) return;
       const data = JSON.parse(ev.data);
       switch (data.kind) {
         case 'session.created':
@@ -83,10 +83,24 @@ export function TalkPage(): JSX.Element {
   };
 
   const stop = (): void => {
-    wsRef.current?.send(JSON.stringify({ kind: 'end' }));
-    wsRef.current?.close();
+    const ws = wsRef.current;
     wsRef.current = null;
+    if (ws) {
+      ws.onmessage = null;
+      ws.onopen = null;
+      try {
+        if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ kind: 'end' }));
+      } catch {
+        /* ignore */
+      }
+      try {
+        ws.close();
+      } catch {
+        /* ignore */
+      }
+    }
     closeMic();
+    closePlayer();
     setRecording(false);
     setSession(null);
   };
@@ -102,6 +116,11 @@ export function TalkPage(): JSX.Element {
     source.connect(processor);
     processor.connect(ctx.destination);
     processor.onaudioprocess = (event) => {
+      if (ws.readyState !== ws.OPEN) return;
+      const playerCtx = playerCtxRef.current;
+      if (playerCtx && playbackTimeRef.current > playerCtx.currentTime + 0.05) {
+        return;
+      }
       const input = event.inputBuffer.getChannelData(0);
       const pcm = new Int16Array(input.length);
       for (let i = 0; i < input.length; i++) {
@@ -112,24 +131,38 @@ export function TalkPage(): JSX.Element {
       const b64 = btoa(String.fromCharCode(...buf));
       ws.send(JSON.stringify({ kind: 'audio.append', audio: b64 }));
     };
-    setInterval(() => {
-      if (ws.readyState === ws.OPEN) ws.send(JSON.stringify({ kind: 'audio.commit' }));
-    }, FRAME_MS * 4);
+    // Server-side semantic_vad commits the audio buffer and creates the
+    // response automatically. A manual commit timer would race with VAD and
+    // double-fire response.create, looping the agent on the same fragment.
   };
 
   const closeMic = (): void => {
-    processorRef.current?.disconnect();
+    if (processorRef.current) {
+      processorRef.current.onaudioprocess = null;
+      processorRef.current.disconnect();
+    }
     sourceRef.current?.disconnect();
     audioCtxRef.current?.close().catch(() => undefined);
+    processorRef.current = null;
+    sourceRef.current = null;
     audioCtxRef.current = null;
   };
 
+  const closePlayer = (): void => {
+    const ctx = playerCtxRef.current;
+    playerCtxRef.current = null;
+    playbackTimeRef.current = 0;
+    if (ctx) ctx.close().catch(() => undefined);
+  };
+
   const enqueueAgentAudio = (b64: string): void => {
+    if (!wsRef.current) return;
     if (!playerCtxRef.current) {
       playerCtxRef.current = new AudioContext({ sampleRate: SAMPLE_RATE });
       playbackTimeRef.current = playerCtxRef.current.currentTime;
     }
     const ctx = playerCtxRef.current;
+    if (ctx.state === 'closed') return;
     const bytes = atob(b64);
     const pcm = new Int16Array(bytes.length / 2);
     for (let i = 0; i < pcm.length; i++) {
