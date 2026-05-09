@@ -156,3 +156,27 @@ The session.update payload for transcription is also different in
 shape (no `output_modalities`, no `audio.output`, no `tools`, no
 `instructions`). See `edge/src/openai/transcription.ts` for the
 canonical payload.
+
+## Vite proxy keys are prefix-matched, not exact
+
+A short Vite gotcha that bit us during testing.
+
+In `frontend/vite.config.ts` the `proxy:` keys are *prefixes*. A rule
+keyed `'/voice'` matches **any** URL starting with that string,
+including the React Router client-side route `/voicemails`. If you add
+a `'/voice'` proxy rule, requests for `/voicemails` will be forwarded
+to the proxy target, the SPA never gets to render that route, and the
+user sees HTTP 500 (`ECONNREFUSED` if the target has no `/voicemails`
+endpoint).
+
+**Symptom:** `/voicemails` returns 500. Frontend log shows
+`http proxy error: /voicemails  AggregateError [ECONNREFUSED]`.
+
+**Fix:** Either drop the `'/voice'` rule (the browser may not need
+the proxy at all if it talks to the edge directly via
+`VITE_EDGE_URL` — that's our v1 setup), or use a more specific match
+that won't capture `/voicemails`, e.g. a regex key
+`'^/voice/'` (with trailing slash).
+
+The current `vite.config.ts` only proxies `/v1` (to the core); browser
+audio WebSockets connect directly to the edge.

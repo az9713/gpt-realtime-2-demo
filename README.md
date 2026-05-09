@@ -277,6 +277,7 @@ lookups. Recommended entry points:
 | Map any model to the features that use it | [`docs/reference/model-feature-map.md`](docs/reference/model-feature-map.md) |
 | Deep-dive on the GA Realtime API itself | [`docs/reference/gpt-realtime-2.md`](docs/reference/gpt-realtime-2.md) |
 | End-to-end Twilio integration walk-through | [`docs/reference/twilio-integration.md`](docs/reference/twilio-integration.md) |
+| **What's tested + coverage matrix + known gaps** | [`docs/testing.md`](docs/testing.md) |
 | Operations runbook | [`docs/ops.md`](docs/ops.md) |
 
 Concept docs cover each subsystem in depth — voice agents, realtime
@@ -292,10 +293,19 @@ translate mode, voicemail, note-taker, and audit transcripts. See
 - ✅ All 9 build phases complete (41 tasks per [`PLAN.md`](PLAN.md))
 - ✅ All 6 whisper-feature phases complete
 - ✅ 61 Python tests + 27 Node tests passing
-- ✅ 8 HVAC scenario evals passing
+- ✅ 8 HVAC scenario evals passing (incl. translate-bilingual,
+  notetaker, voicemail-after-hours)
 - ✅ ruff + tsc clean
-- ✅ 3 alembic migrations applied
-- ✅ Three Realtime models in active use across 11 features
+- ✅ 3 alembic migrations applied (head: `0003_audit_divergences`)
+- ✅ Three Realtime models in active use:
+  - `gpt-realtime-2` at `wss://api.openai.com/v1/realtime?model=gpt-realtime-2`
+  - `gpt-realtime-translate` at `wss://api.openai.com/v1/realtime?model=gpt-realtime-translate`
+  - `gpt-realtime-whisper` at `wss://api.openai.com/v1/realtime?intent=transcription` (live handshake confirmed)
+- ✅ 5 cockpit routes (Talk · Approvals · Voicemails · Audit · Conversations) all return HTTP 200
+- ✅ Browser-driven feature test pass complete — see [`docs/testing.md`](docs/testing.md)
+
+For the full test-coverage matrix, gaps inventory, and how to
+reproduce every layer locally, see [`docs/testing.md`](docs/testing.md).
 
 ---
 

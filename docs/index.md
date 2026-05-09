@@ -57,6 +57,7 @@ plus three additional concept docs for the whisper-enabled features.
 
 - [`SPEC.md`](../SPEC.md) — the platform contract.
 - [`PLAN.md`](../PLAN.md) — the implementation plan, 9 phases / 41 tasks.
-- [`docs/ops.md`](ops.md) — operations runbook (recovery procedures).
+- [`docs/ops.md`](ops.md) — operations runbook (recovery procedures + gotchas).
+- [`docs/testing.md`](testing.md) — every test layer, coverage matrix, gaps.
 - [`docs/eval-format.md`](eval-format.md) — scenario eval YAML schema.
 - [`README.md`](../README.md) — install, build, run.

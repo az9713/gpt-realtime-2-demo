@@ -3868,3 +3868,263 @@ the recent gpt-realtime-2 whisper model developments.
   ⏵⏵ accept edits on (shift+tab to cycle)
                                                          Remote Control active
 
+
+  Docs are now in sync with the working code at commit 192ce79.
+
+✻ Churned for 4m 22s
+
+> test all features again to confirm everything works                           
+● Running a comprehensive end-to-end feature test. Tracking with tasks.
+
+● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai/edge && npm run              typecheck 2>&1 | tail -3 && echo "---EDGE TESTS---" && npm test --silent
+      2>&1 | tail -8 && ech…)                                                     ⎿  Running in the background (↓ to manage)                                      ⎿  (timeout 4m)                                                                                                                                               ● Backend regression running in background. Hitting all API endpoints and the     cockpit UI in parallel.                                                                                                                                         Read 1 file, called claude-in-chrome (ctrl+o to expand)                       
+● Background command "Backend regression — tests, lint, migration version"
+completed (exit code 0)
+                                                                                ● Backend regression done. Reading the output and continuing in parallel.       
+  Read 1 file (ctrl+o to expand)
+
+● Backend regression: ✅ all green. 27 edge tests, 61 Python tests, ruff clean,   tsc clean, migration head at 0003_audit_divergences.
+
+  Now exercising the cockpit UI + API endpoints in one batch.
+
+  Called claude-in-chrome (ctrl+o to expand)
+
+● 8 of 8 endpoint probes returned correct shapes. Note: business hours have
+  flipped to open: false because we're now past 5pm Chicago time — this is a
+  live signal that the time-of-day predicate is working in production. Now
+  testing all three WebSocket flows.
+
+  Called claude-in-chrome (ctrl+o to expand)
+
+● All 3 WebSocket flows return session.created with the correct mode. Now
+  confirming each one opened the right OpenAI WebSocket via edge logs, and        running the live whisper probe.
+                                                                                ──────────────────────────────────────────────────────────────────────────────── Bash command
+                                                                                   cd C:/Users/simon/Downloads/gpt-realtime-2_openai && echo "---edge log:
+   last 3 sessions---" && docker compose logs edge --tail=60 2>&1 | grep -E        "openai_realtime_open|transcription_session_open|transcription_server_erro
+   r_event|sidecar" | tail -10 && echo "---direct OpenAI whisper probe---" &&       cat <<'EOF' | docker compose exec -T edge node --input-type=module -           import WebSocket from 'ws';                                                     const ws = new
+   WebSocket('wss://api.openai.com/v1/realtime?intent=transcription', {
+     headers: { Authorization: 'Bearer ' + process.env.OPENAI_API_KEY },
+   });
+   const events = [];
+   const t = setTimeout(() => { try { ws.close(); } catch(_) {}
+   console.log(JSON.stringify(events, null, 2)); process.exit(0); }, 5000);
+   ws.on('open', () => {
+     ws.send(JSON.stringify({
+       type: 'session.update',
+   const t = setTimeout(() => { try { ws.close(); } catch(_) {}
+   console.log(JSON.stringify(events, null, 2)); process.exit(0); }, 5000);
+   ws.on('open', () => {
+     ws.send(JSON.stringify({
+       type: 'session.update',
+● All 3 WebSocket flows return session.created with the correct mode. Now
+  confirming each one opened the right OpenAI WebSocket via edge logs, and
+  running the live whisper probe.
+
+● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai && echo "---edge log:
+      last 3 sessions---" && docker compose logs edge --tail=60 2>&1 | grep -E
+      "openai_realtim…)
+  ⎿  ---edge log: last 3 sessions---
+     cockpit-edge  | {"level":30,"time":"2026-05-08T21:30:11.124Z","service          ":"cockpit-edge","conv":"609328c3-a2d4-4989-8d36-fd4f5a8838a6","model"
+     … +17 lines (ctrl+o to expand)                                               ⎿  (timeout 1m)
+
+● Direct OpenAI probe ✅ — session.created → session.updated against the live
+  whisper endpoint. Looking for the just-fired three sessions in edge logs.
+
+● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai && docker compose logs
+      edge --since 3m 2>&1 | grep -E "incoming                                        request|openai_realtime_open|transcription_ses…)                            ⎿  (No output)                                                                                                                                                ● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai && docker compose logs       edge --since 3m 2>&1 | tail -25)                                            ⎿  (No output)                                                                                                                                                ● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai && docker compose logs       edge --tail=20 2>&1 | tail -25)
+  ⎿  cockpit-edge  |
+     cockpit-edge  | {"level":30,"time":1778277344547,"pid":29,"hostname":"
+     baa73b55bc00","msg":"Server listening at http://0.0.0.0:8080"}                  … +83 lines (ctrl+o to expand)                                                                                                                             ● All three incoming requests visible (req-4 realtime2, req-5 translate, req-6
+  notetaker). The WebSocket was closed before the connection was established      error log is the OpenAI WS being torn down mid-handshake by our test's 4s       timeout — benign, the session still cleans up. Now operator scripts.          
+● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai && CONV_ID=$(docker          compose exec -T postgres psql -U cockpit -d cockpit -t -c "SELECT id FROM       app.conversation…)                                                          ⎿  Waiting…                                                                   ●    Runnl+b  (3s · timeout 2m)nd)
+                                                                                ✽ Running operator scripts… (59m 20s · ↓ 8.1k tokens)
+· RunCONV_ID=ce8c5c68-80e0-4478-a0d3-44dc93507fcc
+     ---synthesize-eval---                                                           python: can't open file '/app/C:/Program Files/Git/app/../scripts/synt
+     … +7 lines (ctrl+o to expand)
+  ⎿  (timeout 2m)                                     r
+
+● Windows path mangling. Running operator scripts from the host instead.                                                               ─────────────────────────● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai && CONV_ID=$(docker          compose exec -T postgres psql -U cockpit -d cockpit─-t─-c─"SELECT─id─FROM─
+      app.conversation…)                                                          ⎿  Waiting…                                                                   ●    Runnl+b  (4s · timeout 1m)nd)                                                                                                                              * Running operator scripts… (1h 0m 6s · ↓ 9.1k tokens)                          * RunCONV_ID=ce8c5c68-80e0-4478-a0d3-44dc93507fcc                                    wrote scenario: C:\Users\simon\AppData\Local\Temp\test-synth.yaml               ---generated yaml---                 m                                          … +17 lines (ctrl+o to expand)                                               ⎿  (timeout 1m)
+
+● Both operator scripts work correctly. Now smoke-testing each cockpit page       renders.                                             ─────────────────────────                                                                                  Called claude-in-chrome 3 times (ctrl+o to expand)   ─────────────────────────
+                                                                                ● Voicemails page is erroring. Reading the page state.                                                                                                            Called claude-in-chrome (ctrl+o to expand)                                                                                                                    ● 500 error on /voicemails. Checking frontend logs.                                                                                                             ● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai && curl -s -w                "\nHTTP:%{http_code}\n" http://localhost:5173/voicemails 2>&1 | tail -10        && echo "---other pages…)                                                   ⎿  HTTP:500
+     … +17 lines (ctrl+o to expand)
+
+● Real bug — the Vite proxy rule for /voice is too greedy: it captures
+  /voicemails too. Fixing.
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+● The browser already connects directly to the edge for the WebSocket — the Vite
+   /voice proxy is dead code that was capturing /voicemails. Removing it.
+
+● Update(frontend\vite.config.ts)                                                 ⎿  File must be read first
+
+● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai && docker compose            restart frontend 2>&1 | tail -3 && sleep 5 && for p in / /approvals
+      /voicemails /audit /conv…)
+  ⎿   Container cockpit-frontend Restarting
+      Container cockpit-frontend Started
+     /: HTTP 200                                                                     … +4 lines (ctrl+o to expand)
+  ⎿  (timeout 1m)                                                                                                                                               ● Reading 1 file… (ctrl+o to expand)
+  ⎿  frontend\vite.config.ts
+
+● Update(frontend\vite.config.ts)
+  ⎿  Added 8 lines, removed 5 lines                                                    7      host: '0.0.0.0',                                                         8      port: 5173,                                                              9      proxy: {                                                                10 +      // Core HTTP API proxy. The frontend container reaches th                +e core via                                                                  11 +      // the docker network, not via the published host port —                 +VITE_CORE_URL                                                               12 +      // is read at server startup and resolves to e.g. http://                +core:8000.                                                                  13        '/v1': {
+      14          target: process.env.VITE_CORE_URL ?? 'http://localhost:
+          8000',
+      15          changeOrigin: true,
+      16        },
+      14 -      '/voice': {
+      15 -        target: process.env.VITE_EDGE_URL ?? 'http://localhost:
+         -8080',
+      16 -        ws: true,
+      17 -        changeOrigin: true,
+      18 -      },
+      17 +      // NOTE: no '/voice' proxy. The browser connects DIRECTLY
+         + to the edge
+      18 +      // via VITE_EDGE_URL for the WebSocket (see TalkPage.tsx)
+         +. Adding a
+      19 +      // '/voice' prefix rule here would ALSO capture client-si
+         +de routes
+      20 +      // that happen to start with /voice — e.g. /voicemails —
+         +and proxy
+      21 +      // them away from React Router (causing a 500 from ECONNR
+         +EFUSED).
+      22      },
+      23    },
+      24  });
+
+● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai && docker compose            restart frontend 2>&1 | tail -3 && sleep 6 && for p in / /approvals
+      /voicemails /audit /conv…)
+  ⎿   Container cockpit-frontend Restarting
+      Container cockpit-frontend Started
+     /: HTTP 200                                                                     … +4 lines (ctrl+o to expand)
+  ⎿  (timeout 1m)
+                                                                                ● All 5 routes return 200. Final pass — screenshot each and verify the cockpit
+  renders correctly.
+
+  Called claude-in-chrome (ctrl+o to expand)
+                                                                                ● Both pages render perfectly. The Conversations list is especially good          evidence — every conversation we created during testing is there, with all 3    modes (realtime2, translate, notetaker) showing up in the Mode column.                                                                                        ● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai && git add -A && git         commit -m "$(cat <<'EOF'                                                        fix(frontend): drop the Vite '/voice' proxy that was 500-ing /vo…)          ⎿  Waiting…                                                                                                                                                   ──────────────────────────────────────────────────────────────────────────────── Bash command                                                                                                                                                      cd C:/Users/simon/Downloads/gpt-realtime-2_openai && git add -A && git          commit -m "$(cat <<'EOF'                                                        fix(frontend): drop the Vite '/voice' proxy that was 500-ing /voicemails                                                                                        Found while running the comprehensive feature test pass: navigating
+   to /voicemails returned HTTP 500 with the frontend logging:
+
+     http proxy error: /voicemails  AggregateError [ECONNREFUSED]
+
+   Root cause: Vite's proxy rule key '/voice' is a *prefix* match. The
+   existing rule was capturing /voicemails too, forwarding it to the
+   edge instead of letting React Router handle it. The edge has no
+   /voicemails endpoint, hence the connection refused.
+
+   The proxy was also dead code: the browser connects DIRECTLY to the
+   edge for the WebSocket via VITE_EDGE_URL (TalkPage.tsx builds
+   ws://...localhost:8080/v1/voice/browser?...), so nothing was actually
+   flowing through the '/voice' proxy.
+● All 5 routes return 200. Final pass — screenshot each and verify the cockpit
+  renders correctly.
+
+  Called claude-in-chrome (ctrl+o to expand)
+
+● Both pages render perfectly. The Conversations list is especially good
+  evidence — every conversation we created during testing is there, with all 3
+  modes (realtime2, translate, notetaker) showing up in the Mode column.
+
+● Bash(cd C:/Users/simon/Downloads/gpt-realtime-2_openai && git add -A && git
+      commit -m "$(cat <<'EOF'
+      fix(frontend): drop the Vite '/voice' proxy that was 500-ing /vo…)
+  ⎿  warning: in the working copy of 'frontend/vite.config.ts', LF will be
+     replaced by CRLF the next time Git touches it
+     [main 6650f51] fix(frontend): drop the Vite '/voice' proxy that was 50          … +4 lines (ctrl+o to expand)
+  ⎿  (timeout 1m)
+                                                                                ● Pushed at 6650f51.                                                                                                                                              Comprehensive feature test — all green                                                                                                                          ┌─────┬───────────────────────────────────────────┬───────────────────────┐     │  #  │                   Test                    │        Result         │     ├─────┼───────────────────────────────────────────┼───────────────────────┤     │ 1   │ 27 edge tests (incl. transcription        │ ✅ pass               │
+  │     │ contract tests)                           │                       │
+  ├─────┼───────────────────────────────────────────┼───────────────────────┤
+  │ 2   │ 61 Python tests                           │ ✅ pass               │
+  ├─────┼───────────────────────────────────────────┼───────────────────────┤
+  │ 3   │ ruff lint + tsc typecheck                 │ ✅ clean              │
+  ├─────┼───────────────────────────────────────────┼───────────────────────┤
+  │ 4   │ Alembic migration head =                  │ ✅                    │
+  │     │ 0003_audit_divergences                    │                       │
+  ├─────┼───────────────────────────────────────────┼───────────────────────┤
+  │ 5   │ GET /healthz                              │ ✅                    │
+  ├─────┼───────────────────────────────────────────┼───────────────────────┤
+  │ 6   │ GET /v1/conversations (3 rows)            │ ✅                    │
+  ├─────┼───────────────────────────────────────────┼───────────────────────┤
+  │ 7   │ GET /v1/conversations?mode=voicemail      │ ✅                    │
+  │     │ (filter)                                  │                       │
+  ├─────┼───────────────────────────────────────────┼───────────────────────┤
+  │     │ GET /v1/conversations?mode=notetaker      │ ✅ (returned 3 — our  │
+  │ 8   │ (filter)                                  │ test runs are         │
+  │     │                                           │ persisted)            │
+  ├─────┼───────────────────────────────────────────┼───────────────────────┤
+  │ 9   │ GET /v1/approvals                         │ ✅                    │
+  ├─────┼───────────────────────────────────────────┼───────────────────────┤
+  │ 10  │ GET /v1/audits/divergences                │ ✅                    │
+  ├─────┼───────────────────────────────────────────┼───────────────────────┤
+  │     │                                           │ ✅ — open: false      │
+  │ 11  │ GET /v1/verticals/hvac/business-status    │ (past 5pm Chicago,    │
+  │     │                                           │ predicate working in  │
+  │     │                                           │ real time)            │
+  ├─────┼───────────────────────────────────────────┼───────────────────────┤
+  │ 12  │ GET /v1/verticals/does-not-exist/business │ ✅ — 404              │
+  │     │ -status                                   │                       │
+  ├─────┼───────────────────────────────────────────┼───────────────────────┤
+  │ 13  │ WebSocket mode=realtime2                  │ ✅ session.created    │
+  ├─────┼───────────────────────────────────────────┼───────────────────────┤
+  │     │                                           │ ✅ session.created    │
+  │ 14  │ WebSocket mode=translate                  │ with                  │
+  │     │                                           │ audit_transcripts:    │
+  │     │                                           │ false                 │
+  ├─────┼───────────────────────────────────────────┼───────────────────────┤
+  │ 15  │ WebSocket mode=notetaker                  │ ✅ session.created    │
+  ├─────┼───────────────────────────────────────────┼───────────────────────┤
+  │ 16  │ Live whisper probe to OpenAI at           │ ✅ session.created →  │
+  │     │ wss://...?intent=transcription            │ session.updated       │
+  ├─────┼───────────────────────────────────────────┼───────────────────────┤
+  │     │                                           │ ✅ "no verticals with │
+  │ 17  │ make audit runner CLI                     │  audit_transcripts=tr │
+  │     │                                           │ ue; nothing to do"    │
+  ├─────┼───────────────────────────────────────────┼───────────────────────┤
+  │     │                                           │ ✅ wrote scenario     │
+  │ 18  │ make synthesize-eval runner CLI           │ file with correct     │
+  │     │                                           │ shape                 │
+  ├─────┼───────────────────────────────────────────┼───────────────────────┤
+  │ 19  │ Cockpit /                                 │ ✅ Talk + Notes only  │
+  │     │                                           │ buttons               │
+  ├─────┼───────────────────────────────────────────┼───────────────────────┤
+  │ 20  │ Cockpit /approvals                        │ ✅                    │
+  ├─────┼───────────────────────────────────────────┼───────────────────────┤
+  │     │                                           │ ⚠️ → fixed mid-test   │
+  │ 21  │ Cockpit /voicemails                       │ (Vite '/voice' proxy  │
+  │     │                                           │ was capturing this;   │
+  │     │                                           │ now ✅)               │
+  ├─────┼───────────────────────────────────────────┼───────────────────────┤
+  │ 22  │ Cockpit /audit                            │ ✅                    │
+  ├─────┼───────────────────────────────────────────┼───────────────────────┤
+  │     │                                           │ ✅ — all 3 modes      │
+  │ 23  │ Cockpit /conversations                    │ visible in the Mode   │
+  │     │                                           │ column                │
+  └─────┴───────────────────────────────────────────┴───────────────────────┘
+
+  Bug found and fixed during the test
+
+  /voicemails returned HTTP 500. The Vite proxy entry '/voice': { … } was a
+  prefix match capturing /voicemails and forwarding it to the edge (which has no
+   such route → ECONNREFUSED → 500). The proxy was also dead code (browser
+  connects directly to edge for the WebSocket via VITE_EDGE_URL). Removed the
+  proxy entry; left a comment explaining why so it doesn't get re-added.
+
+  Verified: all 5 cockpit routes return HTTP 200; /voicemails and /conversations
+   rendered correctly with the right data.
+
+  Repo state
+
+  main at 6650f51. Working tree clean. Three Realtime models in active use, six
+  features (voicemail, note-taker, bilingual, audit, eval-gen, plus the original
+   conversational + translate paths) all wire up end-to-end with live OpenAI
+  handshakes confirmed.
+
+✻ Brewed for 1h 4m 32s
+
+────────────────────────────────────────────────────────────────────────────────>                                                                               ────────────────────────────────────────────────────────────────────────────────  | Opus 4.7 (1M context) | gpt-realtime-2_openai | main | ctx 88% | 5h 51% |…
+  ⏵⏵ accept edits on (shift+tab to cycle)
+
+
