@@ -573,9 +573,9 @@ active conversations, with one-click approve/deny. Subscribes to the
 Redis approval channel via the WebSocket.
 
 **Acceptance criteria:**
-- [ ] Pending approvals appear within 500ms of being created.
-- [ ] Approve/deny buttons resolve via core API.
-- [ ] Resolved approvals leave the queue immediately.
+- [x] Pending approvals appear within 500ms of being created.
+- [x] Approve/deny buttons resolve via core API.
+- [x] Resolved approvals leave the queue immediately.
 
 **Verification:**
 - [ ] Manual: trigger a dangerous tool from a voice session, click

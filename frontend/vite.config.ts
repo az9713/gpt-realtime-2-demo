@@ -13,6 +13,7 @@ export default defineConfig({
       '/v1': {
         target: process.env.VITE_CORE_URL ?? 'http://localhost:8000',
         changeOrigin: true,
+        ws: true,
       },
       // NOTE: no '/voice' proxy. The browser connects DIRECTLY to the edge
       // via VITE_EDGE_URL for the WebSocket (see TalkPage.tsx). Adding a

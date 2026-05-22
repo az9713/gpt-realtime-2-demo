@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ModeBadge } from './ModeBadge';
 import { ModeToggle } from './ModeToggle';
 import { TranscriptView, type TranscriptLine } from './TranscriptView';
+import { ApprovalQueue } from '../approvals/ApprovalQueue';
 
 type SessionMode = 'realtime2' | 'translate' | 'notetaker';
 
@@ -225,17 +226,20 @@ export function TalkPage(): JSX.Element {
         </div>
         <TranscriptView lines={lines} />
       </section>
-      <aside className="bg-slate-900 border border-slate-800 rounded-lg p-4 text-sm text-slate-400">
-        <h2 className="text-slate-100 font-semibold mb-2">Live session</h2>
-        <p>
-          Press Talk and grant microphone access. Audio streams over WebSocket
-          to the edge; the edge bridges to the OpenAI Realtime API and dispatches
-          tool calls into the Python agent core.
+      <aside className="bg-slate-900 border border-slate-800 rounded-lg p-4 flex flex-col overflow-auto">
+        <h2 className="text-slate-100 font-semibold mb-2 text-sm">Approval queue</h2>
+        <p className="text-xs text-slate-500 mb-3">
+          Dangerous tool calls pause here for operator review. Approve or deny
+          below — or speak the configured phrase during the session.
         </p>
-        <p className="mt-3">
-          Approvals appear in the Approvals tab and are also resolvable by the
-          spoken phrase configured in the active vertical pack.
-        </p>
+        <div className="flex-1 overflow-auto">
+          <ApprovalQueue compact conversationId={session?.conversationId} />
+        </div>
+        {!session && (
+          <p className="text-xs text-slate-600 mt-2">
+            Start a session to filter approvals by conversation.
+          </p>
+        )}
       </aside>
     </div>
   );
