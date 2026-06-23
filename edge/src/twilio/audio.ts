@@ -3,7 +3,6 @@
  * Implemented from G.711 reference tables; no external deps.
  */
 
-const MU = 255;
 const BIAS = 0x84;
 
 export function muLawDecodeByte(byte: number): number {

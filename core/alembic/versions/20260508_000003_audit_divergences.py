@@ -11,9 +11,10 @@ runner: places where the agent's transcript (model='realtime2' or
 
 from __future__ import annotations
 
-from typing import Sequence
+from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "0003_audit_divergences"
