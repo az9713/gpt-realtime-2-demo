@@ -20,11 +20,13 @@ for _ in {1..30}; do
   sleep 1
 done
 
+# The core image pip-installs the package (+console scripts) into system
+# Python; uv is not in the image, so call alembic/pytest directly.
 echo "[e2e] running migrations"
-docker compose run --rm core uv run alembic upgrade head
+docker compose run --rm core alembic upgrade head
 
 echo "[e2e] running scenario evals"
-docker compose run --rm core uv run pytest tests/eval -q
+docker compose run --rm core pytest tests/eval -q
 
 echo "[e2e] tearing down"
 docker compose down
