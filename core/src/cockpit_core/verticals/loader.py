@@ -95,13 +95,13 @@ def _ensure_pack_namespace(pack_dir: Path, name: str) -> None:
     parent_name = "verticals"
     if parent_name not in sys.modules:
         parent = ModuleType(parent_name)
-        parent.__path__ = [str(pack_dir.parent)]  # type: ignore[attr-defined]
+        parent.__path__ = [str(pack_dir.parent)]
         sys.modules[parent_name] = parent
 
     pkg_name = f"{parent_name}.{name}"
     if pkg_name not in sys.modules:
         pkg = ModuleType(pkg_name)
-        pkg.__path__ = [str(pack_dir)]  # type: ignore[attr-defined]
+        pkg.__path__ = [str(pack_dir)]
         sys.modules[pkg_name] = pkg
 
     sandbox_path = pack_dir / "sandbox.py"

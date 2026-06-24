@@ -31,7 +31,7 @@ class ToolRegistry:
     def has(self, name: str) -> bool:
         return name in self._tools
 
-    def list(self) -> list[Tool]:
+    def tools(self) -> list[Tool]:
         return list(self._tools.values())
 
     def schemas(self) -> list[dict[str, object]]:

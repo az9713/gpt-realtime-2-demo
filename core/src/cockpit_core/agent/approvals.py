@@ -104,9 +104,11 @@ class ApprovalManager:
                 approval.id in self._pending_by_conversation.get(conversation_id, [])
             ) else None
 
-        new_status = "approved" if decision == "approved" else "denied"
+        new_status: Literal["approved", "denied"] = (
+            "approved" if decision == "approved" else "denied"
+        )
         await update_tool_call_status(tool_call_id, status=new_status)
-        return decision  # type: ignore[return-value]
+        return decision
 
     async def resolve(
         self,

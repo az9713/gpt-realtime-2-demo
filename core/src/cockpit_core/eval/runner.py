@@ -217,18 +217,18 @@ async def run_scenario(
                 f"containing {json.dumps(expected.args_contains)} not found"
             )
 
-    for expected in scenario.expected_approvals:
+    for approval in scenario.expected_approvals:
         match = next(
             (
                 a
                 for a in approvals
-                if a["tool"] == expected.tool and a["decision"] == expected.decision
+                if a["tool"] == approval.tool and a["decision"] == approval.decision
             ),
             None,
         )
         if match is None:
             failures.append(
-                f"expected approval for {expected.tool!r} as {expected.decision!r} not observed"
+                f"expected approval for {approval.tool!r} as {approval.decision!r} not observed"
             )
 
     if scenario.expected_mode is not None and ctx.mode != scenario.expected_mode:
