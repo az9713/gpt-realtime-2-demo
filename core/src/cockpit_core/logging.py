@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import sys
-from typing import Any
+from typing import Any, cast
 
 import structlog
 
@@ -32,4 +32,4 @@ def configure_logging(level: str = "info") -> None:
 
 
 def get_logger(name: str | None = None, **kwargs: Any) -> structlog.stdlib.BoundLogger:
-    return structlog.get_logger(name, **kwargs)
+    return cast(structlog.stdlib.BoundLogger, structlog.get_logger(name, **kwargs))

@@ -209,7 +209,7 @@ async def post_transcript(conversation_id: str, payload: dict[str, Any]) -> dict
         raise HTTPException(400, f"invalid role: {role}")
     turn = await append_turn(
         conversation_id=conversation_id,
-        role=role,  # type: ignore[arg-type]
+        role=role,
         transcript=text,
         latency_ms=latency,
         model=model,
@@ -271,4 +271,4 @@ async def events_ws(ws: WebSocket, conversation_id: str) -> None:
         pass
     finally:
         await pubsub.unsubscribe(channel)
-        await pubsub.aclose()
+        await pubsub.aclose()  # type: ignore[no-untyped-call]
